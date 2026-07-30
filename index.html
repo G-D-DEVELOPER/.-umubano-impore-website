@@ -2500,13 +2500,17 @@
     var saved = existingPosts.slice();
     for(var i=0;i<missing.length;i++){
       try{
-        await siteStorage.set(postKey(pageId, secId, missing[i].id), JSON.stringify(missing[i]), true);
+        // withRetry absorbs a single dropped request or momentary network hiccup —
+        // a real database write can fail transiently even when nothing is actually
+        // wrong, so one bad moment must not mean this item (or any after it) never
+        // gets seeded at all.
+        await withRetry(function(){ return siteStorage.set(postKey(pageId, secId, missing[i].id), JSON.stringify(missing[i]), true); });
         saved.push(missing[i]);
       }catch(e){
-        // If we're being rate-limited, stop trying more writes right now instead of
-        // hammering the same limit again — whatever saved successfully stays saved,
-        // and the rest will pick back up on a later visit once the limit resets.
-        break;
+        // Even after retrying, this one item still failed — move on to the rest
+        // rather than giving up on everything after it. It'll be tried again
+        // (and self-heal) the next time this page loads.
+        console.error('Could not seed post', missing[i].id, e);
       }
       if(i < missing.length-1) await sleep(600);
     }
