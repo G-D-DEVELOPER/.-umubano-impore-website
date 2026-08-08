@@ -23,6 +23,7 @@
     --font-body:'Karla', sans-serif;
     --page-bg:#FFFFFF;
     --text-scale:1;
+    --logo-scale:1;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -72,7 +73,7 @@
   }
   .menu-btn span{display:block; width:20px; height:2px; background:var(--green-deep); border-radius:2px;}
   .brand{display:flex; flex-direction:column; line-height:1.1;}
-  .brand-logo{width:60px; height:auto; border-radius:12px; display:block; flex:none;}
+  .brand-logo{width:calc(72px * var(--logo-scale)); height:auto; border-radius:12px; display:block; flex:none;}
   .brand .name{font-family:var(--font-heading); font-weight:700; font-size:22px; letter-spacing:0.02em;}
   .brand .tag{font-size:11px; color:var(--green-line); letter-spacing:0.08em; text-transform:uppercase;}
   .admin-area{display:flex; align-items:center; gap:10px;}
@@ -527,7 +528,7 @@
 
   @media (max-width:600px){
     .brand .name{font-size:17px;}
-    .brand-logo{width:44px;}
+    .brand-logo{width:calc(52px * var(--logo-scale));}
   }
   @media (prefers-reduced-motion: reduce){
     .sidebar,.overlay,.nav-sub,.chev,.modal-bg{transition:none !important;}
@@ -757,6 +758,7 @@
       pageTitleEditBtn:'Edit page title', pageTitleLabel:'Name shown on this page\u2019s photo',
       backBtn:'Back',
       managePagesNav:'Manage pages', managePagesTitle:'Manage pages',
+      renamePagesHeading:'Rename pages', renamePagesBtn:'Save names', pageNamesSaved:'Page names saved.',
       managePagesHint:'Add whole new pages to the site, each with its own posts. The built-in pages (Home, Our non-profit organisation, Projects, Join in, Contact, Sponsors) can’t be removed, but any page you add here can be renamed or deleted again.',
       addPageHeading:'Add a new page', pageNameEn:'Page name (English)', pageNameFr:'Page name (French, optional)', pageNameRw:'Page name (Kinyarwanda, optional)',
       addPageBtn:'Add page', noCustomPages:'No pages added yet.',
@@ -764,6 +766,7 @@
       deletePageConfirm:'Delete this page? Any posts on it will stop being reachable, but their data is kept, not deleted.',
       pageNameRequired:'Type a page name first.',
       textSizeLabel:'Text size', textSizeSmall:'Small', textSizeMedium:'Medium', textSizeLarge:'Large', textSizeXL:'Extra large',
+      logoSizeLabel:'Logo size (top bar)',
       footerSiteMap:'Site Map', footerAddress:'Address', footerContact:'Contact Us', footerFollow:'Follow Us',
       footerPhone:'Phone:', footerEmail:'E-mail:',
       footerEditBtn:'Edit footer details', footerEditTitle:'Footer details',
@@ -827,6 +830,7 @@
       pageTitleEditBtn:'Modifier le titre de la page', pageTitleLabel:'Nom affiché sur la photo de cette page',
       backBtn:'Retour',
       managePagesNav:'Gérer les pages', managePagesTitle:'Gérer les pages',
+      renamePagesHeading:'Renommer les pages', renamePagesBtn:'Enregistrer les noms', pageNamesSaved:'Noms des pages enregistrés.',
       managePagesHint:"Ajoutez de nouvelles pages au site, chacune avec ses propres publications. Les pages intégrées (Accueil, Notre association, Projets, Participer, Contact, Sponsors) ne peuvent pas être supprimées, mais toute page ajoutée ici peut être renommée ou supprimée.",
       addPageHeading:'Ajouter une nouvelle page', pageNameEn:'Nom de la page (anglais)', pageNameFr:'Nom de la page (français, facultatif)', pageNameRw:'Nom de la page (kinyarwanda, facultatif)',
       addPageBtn:'Ajouter la page', noCustomPages:'Aucune page ajoutée pour le moment.',
@@ -834,6 +838,7 @@
       deletePageConfirm:"Supprimer cette page ? Les publications qui s'y trouvent ne seront plus accessibles, mais leurs données sont conservées, pas supprimées.",
       pageNameRequired:"Entrez d'abord un nom de page.",
       textSizeLabel:'Taille du texte', textSizeSmall:'Petite', textSizeMedium:'Moyenne', textSizeLarge:'Grande', textSizeXL:'Très grande',
+      logoSizeLabel:'Taille du logo (barre du haut)',
       footerSiteMap:'Plan du site', footerAddress:'Adresse', footerContact:'Nous contacter', footerFollow:'Suivez-nous',
       footerPhone:'Téléphone :', footerEmail:'E-mail :',
       footerEditBtn:'Modifier les coordonnées', footerEditTitle:'Coordonnées du pied de page',
@@ -898,6 +903,7 @@
       pageTitleEditBtn:'Hindura umutwe w’urupapuro', pageTitleLabel:'Izina rigaragara ku ifoto y’uru rupapuro',
       backBtn:'Subira inyuma',
       managePagesNav:'Gucunga amapaji', managePagesTitle:'Gucunga amapaji',
+      renamePagesHeading:'Hindura amazina y\'amapaji', renamePagesBtn:'Bika amazina', pageNamesSaved:'Amazina y\'amapaji yabitswe.',
       managePagesHint:"Ongeraho amapaji mashya ku rubuga, buri imwe ifite amakuru yayo bwite. Amapaji asanzwe (Ahabanza, Umuryango wacu, Imishinga, Twifatanye, Twandikire, Abaterankunga) ntashobora gusibwa, ariko ipaji iyo ari yo yose wongeyeho hano ushobora kuyihindura izina cyangwa kuyisiba.",
       addPageHeading:'Ongeraho ipaji nshya', pageNameEn:'Izina ry\'ipaji (Icyongereza)', pageNameFr:'Izina ry\'ipaji (Igifaransa, si ngombwa)', pageNameRw:'Izina ry\'ipaji (Ikinyarwanda, si ngombwa)',
       addPageBtn:'Ongeraho ipaji', noCustomPages:'Nta paji yongewemo kugeza ubu.',
@@ -905,6 +911,7 @@
       deletePageConfirm:'Gusiba iyi paji? Amakuru ari kuri yo ntazongera kuboneka, ariko ntazasibwa.',
       pageNameRequired:'Banza wandike izina ry\'ipaji.',
       textSizeLabel:'Ingano y\'inyandiko', textSizeSmall:'Nto', textSizeMedium:'Yo hagati', textSizeLarge:'Nini', textSizeXL:'Nini cyane',
+      logoSizeLabel:'Ingano y\'ikirango (hejuru)',
       footerSiteMap:"Urutonde rw'urubuga", footerAddress:'Aderesi', footerContact:'Twandikire', footerFollow:'Dukurikire',
       footerPhone:'Telefone:', footerEmail:'Imeyili:',
       footerEditBtn:"Hindura amakuru yo hasi", footerEditTitle:"Amakuru yo hasi ku rupapuro",
@@ -930,7 +937,8 @@
     pageTitles:{}, // key "page:section" -> the name written across that page's photo
     viewingPost:null, // the single post currently shown full-page via "Read more", or null
     siteTheme:null, // { accent, pageBg, headingFont, bodyFont } once loaded
-    footerInfo:null // address / phone / e-mail / social links shown in the footer
+    footerInfo:null, // address / phone / e-mail / social links shown in the footer
+    pageLabelOverrides:{} // key "page_<id>" or "section_<pageId>_<secId>" -> admin-chosen name
   };
 
   var pageWrap = document.getElementById('pageWrap');
@@ -949,6 +957,37 @@
     var p = findPage(pageId);
     if(!p) return null;
     return p.sections.find(function(s){return s.id===secId;});
+  }
+
+  // Admin can rename any page or sub-page (built-in or custom) without touching
+  // its id — everything that keys off the id (posts, photos, translations) keeps
+  // working exactly the same; only the displayed name changes.
+  function pageDisplayLabel(page){
+    return state.pageLabelOverrides['page_'+page.id] || page.label[state.lang];
+  }
+  function sectionDisplayLabel(page, section){
+    return state.pageLabelOverrides['section_'+page.id+'_'+section.id] || section.label[state.lang];
+  }
+
+  async function loadPageLabelOverrides(){
+    try{
+      var res = await siteStorage.get('page_label_overrides_v1', true);
+      state.pageLabelOverrides = (res && res.value) ? JSON.parse(res.value) : {};
+    }catch(err){
+      state.pageLabelOverrides = {};
+    }
+    renderSidebar();
+    renderFooter();
+  }
+
+  async function savePageLabelOverrides(onRetry){
+    try{
+      await withRetry(function(){ return siteStorage.set('page_label_overrides_v1', JSON.stringify(state.pageLabelOverrides), true); }, onRetry);
+      return true;
+    }catch(err){
+      lastStorageError = err; console.error('Storage error', err);
+      return false;
+    }
   }
   function storageKey(pageId, secId){ return 'posts_'+pageId+'_'+secId; }
 
@@ -972,7 +1011,7 @@
       group.className='nav-group'+(state.openGroup===p.id?' open':'');
       var btn = document.createElement('button');
       btn.className='nav-group-btn'+(state.currentPage===p.id?' active-top':'');
-      btn.innerHTML = '<span>'+p.label[state.lang]+'</span><span class="chev">&#8250;</span>';
+      btn.innerHTML = '<span>'+escapeHtml(pageDisplayLabel(p))+'</span><span class="chev">&#8250;</span>';
       btn.addEventListener('click', function(){
         state.openGroup = state.openGroup===p.id ? null : p.id;
         renderSidebar();
@@ -984,7 +1023,7 @@
       p.sections.forEach(function(s){
         var sbtn = document.createElement('button');
         sbtn.className='nav-sub-btn'+((state.currentPage===p.id && state.currentSection===s.id)?' active':'');
-        sbtn.textContent = s.label[state.lang];
+        sbtn.textContent = sectionDisplayLabel(p, s);
         sbtn.addEventListener('click', function(){
           navigateTo(p.id, s.id);
           closeSidebar();
@@ -1609,12 +1648,18 @@
     { value:'carousel', label:'Sliding carousel' },
     { value:'list', label:'List (one post per row, stacked)' }
   ];
-  var DEFAULT_THEME = { accent:'#1E7A46', pageBg:'#FFFFFF', headingFont:FONT_CHOICES.heading[0].css, bodyFont:FONT_CHOICES.body[0].css, template:'grid', textScale:1 };
+  var DEFAULT_THEME = { accent:'#1E7A46', pageBg:'#FFFFFF', headingFont:FONT_CHOICES.heading[0].css, bodyFont:FONT_CHOICES.body[0].css, template:'grid', textScale:1, logoScale:1 };
   var TEXT_SIZE_CHOICES = [
     { value:0.9, labelKey:'textSizeSmall' },
     { value:1, labelKey:'textSizeMedium' },
     { value:1.15, labelKey:'textSizeLarge' },
     { value:1.3, labelKey:'textSizeXL' }
+  ];
+  var LOGO_SIZE_CHOICES = [
+    { value:0.7, labelKey:'textSizeSmall' },
+    { value:1, labelKey:'textSizeMedium' },
+    { value:1.3, labelKey:'textSizeLarge' },
+    { value:1.6, labelKey:'textSizeXL' }
   ];
 
   function findFontChoice(list, css){ return list.find(function(f){ return f.css===css; }) || list[0]; }
@@ -1644,6 +1689,7 @@
     root.setProperty('--font-heading', theme.headingFont);
     root.setProperty('--font-body', theme.bodyFont);
     root.setProperty('--text-scale', theme.textScale || 1);
+    root.setProperty('--logo-scale', theme.logoScale || 1);
     ensureGoogleFontsLoaded(theme);
   }
 
@@ -1693,6 +1739,10 @@
       '<select id="sdTextSize" style="width:100%;padding:10px;margin-bottom:14px;border-radius:8px;border:1px solid var(--green-line);">'+
         TEXT_SIZE_CHOICES.map(function(sizeChoice){ return '<option value="'+sizeChoice.value+'"'+(sizeChoice.value===(draft.textScale||1)?' selected':'')+'>'+t(sizeChoice.labelKey)+'</option>'; }).join('')+
       '</select>'+
+      '<label class="field-label">'+t('logoSizeLabel')+'</label>'+
+      '<select id="sdLogoSize" style="width:100%;padding:10px;margin-bottom:14px;border-radius:8px;border:1px solid var(--green-line);">'+
+        LOGO_SIZE_CHOICES.map(function(sizeChoice){ return '<option value="'+sizeChoice.value+'"'+(sizeChoice.value===(draft.logoScale||1)?' selected':'')+'>'+t(sizeChoice.labelKey)+'</option>'; }).join('')+
+      '</select>'+
       '<label class="field-label">'+t('layoutLabel')+'</label>'+
       '<select id="sdLayout" style="width:100%;padding:10px;margin-bottom:6px;border-radius:8px;border:1px solid var(--green-line);">'+
         LAYOUT_CHOICES.map(function(l){ return '<option value="'+l.value+'"'+(l.value===(draft.template||'carousel')?' selected':'')+'>'+l.label+'</option>'; }).join('')+
@@ -1715,6 +1765,7 @@
       draft.bodyFont = document.getElementById('sdBodyFont').value;
       draft.template = document.getElementById('sdLayout').value;
       draft.textScale = parseFloat(document.getElementById('sdTextSize').value);
+      draft.logoScale = parseFloat(document.getElementById('sdLogoSize').value);
       applyTheme(draft);
       state.siteTheme = draft;
       renderFeed(state.currentPage, state.currentSection);
@@ -1725,6 +1776,7 @@
     box.querySelector('#sdBodyFont').addEventListener('change', livePreview);
     box.querySelector('#sdLayout').addEventListener('change', livePreview);
     box.querySelector('#sdTextSize').addEventListener('change', livePreview);
+    box.querySelector('#sdLogoSize').addEventListener('change', livePreview);
 
     function cleanup(){ if(bg.parentNode) document.body.removeChild(bg); }
     function revert(){
@@ -1882,8 +1934,8 @@
   function prettyPlaceName(pageId, secId){
     var page = findPage(pageId);
     var section = findSection(pageId, secId);
-    if(page && section && pageId!=='home') return page.label[state.lang]+' › '+section.label[state.lang];
-    if(page) return page.label[state.lang];
+    if(page && section && pageId!=='home') return pageDisplayLabel(page)+' › '+sectionDisplayLabel(page, section);
+    if(page) return pageDisplayLabel(page);
     return pageId+':'+secId;
   }
 
@@ -2213,10 +2265,10 @@
             '<div class="footer-sitemap">';
     allPages().filter(function(p){ return !p.hidden && p.id!=='settings'; }).forEach(function(p){
       html += '<div class="sitemap-group">'+
-                '<button class="sitemap-heading" data-nav="'+p.id+':'+p.sections[0].id+'">'+escapeHtml(p.label[state.lang])+'</button>'+
+                '<button class="sitemap-heading" data-nav="'+p.id+':'+p.sections[0].id+'">'+escapeHtml(pageDisplayLabel(p))+'</button>'+
                 '<ul class="sitemap-list">';
       p.sections.forEach(function(s){
-        html += '<li><button class="footer-link sub" data-nav="'+p.id+':'+s.id+'">'+escapeHtml(s.label[state.lang])+'</button></li>';
+        html += '<li><button class="footer-link sub" data-nav="'+p.id+':'+s.id+'">'+escapeHtml(sectionDisplayLabel(p, s))+'</button></li>';
       });
       html += '</ul></div>';
     });
@@ -2364,6 +2416,9 @@
     var box = document.createElement('div');
     box.className = 'modal modal-wide';
     box.innerHTML = '<h3>'+escapeHtml(t('managePagesTitle'))+'</h3>'+
+      '<h4 style="margin:0 0 8px;">'+escapeHtml(t('renamePagesHeading'))+'</h4>'+
+      '<div id="mpRenameList"></div>'+
+      '<button class="btn-solid" id="mpRenameSaveBtn" style="margin:10px 0 22px;">'+escapeHtml(t('renamePagesBtn'))+'</button>'+
       '<p style="color:var(--muted); font-size:13.5px;">'+escapeHtml(t('managePagesHint'))+'</p>'+
       '<div id="mpList"></div>'+
       '<h4 style="margin:22px 0 8px;">'+escapeHtml(t('addPageHeading'))+'</h4>'+
@@ -2452,6 +2507,56 @@
     }
     renderList();
 
+    function renderRenameList(){
+      var el = box.querySelector('#mpRenameList');
+      el.innerHTML = allPages().filter(function(p){ return p.id!=='settings'; }).map(function(p){
+        var sectionsHtml = p.sections.map(function(s){
+          return '<input type="text" data-rename-section="'+p.id+'|'+s.id+'" class="composer-title-input" '+
+            'value="'+escapeHtml(sectionDisplayLabel(p, s))+'" style="margin:4px 0 4px 20px; width:calc(100% - 20px);">';
+        }).join('');
+        return '<div style="margin-bottom:10px;">'+
+          '<input type="text" data-rename-page="'+p.id+'" class="composer-title-input" '+
+          'value="'+escapeHtml(pageDisplayLabel(p))+'" style="font-weight:700;">'+
+          sectionsHtml+
+        '</div>';
+      }).join('');
+    }
+    renderRenameList();
+
+    box.querySelector('#mpRenameSaveBtn').addEventListener('click', async function(){
+      var saveBtn = box.querySelector('#mpRenameSaveBtn');
+      saveBtn.disabled = true; saveBtn.textContent = t('saving');
+      var before = Object.assign({}, state.pageLabelOverrides);
+      var next = Object.assign({}, state.pageLabelOverrides);
+      box.querySelectorAll('[data-rename-page]').forEach(function(input){
+        var id = input.getAttribute('data-rename-page');
+        var page = findPage(id);
+        var val = input.value.trim();
+        var key = 'page_'+id;
+        if(!page || !val || val === page.label[state.lang]) delete next[key];
+        else next[key] = val;
+      });
+      box.querySelectorAll('[data-rename-section]').forEach(function(input){
+        var parts = input.getAttribute('data-rename-section').split('|');
+        var page = findPage(parts[0]);
+        var section = findSection(parts[0], parts[1]);
+        var val = input.value.trim();
+        var key = 'section_'+parts[0]+'_'+parts[1];
+        if(!section || !val || val === section.label[state.lang]) delete next[key];
+        else next[key] = val;
+      });
+      state.pageLabelOverrides = next;
+      var ok = await savePageLabelOverrides(function(){ saveBtn.textContent = t('retrying'); });
+      saveBtn.disabled = false; saveBtn.textContent = t('renamePagesBtn');
+      if(ok){
+        renderSidebar(); renderFooter(); renderRenameList();
+        showToast(t('pageNamesSaved'));
+      } else {
+        state.pageLabelOverrides = before;
+        showToast(saveErrorMessage(), true);
+      }
+    });
+
     box.querySelector('#mpAddPageBtn').addEventListener('click', async function(){
       var en = box.querySelector('#mpNewPageEn').value.trim();
       var fr = box.querySelector('#mpNewPageFr').value.trim() || en;
@@ -2495,7 +2600,23 @@
     // already has other posts, without ever duplicating or touching existing ones.
     var existingIds = {};
     existingPosts.forEach(function(p){ existingIds[p.id] = true; });
-    var missing = seedList.filter(function(s){ return !existingIds[s.id]; });
+    var candidates = seedList.filter(function(s){ return !existingIds[s.id]; });
+    if(!candidates.length) return existingPosts;
+
+    // A "missing" seed post might be missing because admin deleted it on purpose,
+    // not because it was never added — check the tombstone list left by
+    // deleteSinglePost() before writing anything back. If that check itself
+    // fails, do nothing this time rather than risk undoing a real deletion;
+    // it'll simply check again the next time this page loads.
+    var missing;
+    try{
+      var skipRes = await withRetry(function(){ return siteStorage.list('seedskip_', true); });
+      var skipIds = {};
+      (skipRes && skipRes.keys || []).forEach(function(k){ skipIds[k.slice('seedskip_'.length)] = true; });
+      missing = candidates.filter(function(s){ return !skipIds[s.id]; });
+    }catch(e){
+      return existingPosts;
+    }
     if(!missing.length) return existingPosts;
 
     var saved = existingPosts.slice();
@@ -2603,9 +2724,23 @@
     }
   }
 
+  function isKnownSeedId(id){
+    if(RECOVERED_HOME_POSTS.some(function(s){ return s.id===id; })) return true;
+    for(var key in SEED_POSTS_BY_PAGE){
+      if(SEED_POSTS_BY_PAGE[key].some(function(s){ return s.id===id; })) return true;
+    }
+    return false;
+  }
+
   async function deleteSinglePost(pageId, secId, postId, onRetry){
     try{
       await withRetry(function(){ return siteStorage.delete(postKey(pageId, secId, postId), true); }, onRetry);
+      if(isKnownSeedId(postId)){
+        // This was one of the built-in recovered posts — admin deleted it on
+        // purpose, so remember that permanently, or the automatic seeding above
+        // would otherwise quietly bring it back on a later visit.
+        try{ await siteStorage.set('seedskip_'+postId, '1', true); }catch(e){ /* not critical if only this part fails */ }
+      }
       return true;
     }catch(err){
       lastStorageError = err; console.error('Storage error', err);
@@ -3019,10 +3154,10 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
   function pageTitleKey(pageId, secId){ return 'pagetitle_'+pageId+'_'+secId; }
 
   function defaultPageTitle(pageId, secId){
-    var section = findSection(pageId, secId);
-    if(section) return section.label[state.lang];
     var page = findPage(pageId);
-    return page ? page.label[state.lang] : '';
+    if(!page) return '';
+    var section = findSection(pageId, secId);
+    return section ? sectionDisplayLabel(page, section) : pageDisplayLabel(page);
   }
 
   async function loadPageTitle(pageId, secId){
@@ -3173,12 +3308,12 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     var section = findSection(pageId, secId);
     if(!page || !section){ renderHome(); return; }
     var mapKey = pageId+':'+secId;
-    var sectionLabel = section.label[state.lang];
+    var sectionLabel = sectionDisplayLabel(page, section);
 
     var html = '';
     html += '<div id="pageHeaderControls"></div>';
-    html += '<div class="crumb">'+page.label[state.lang]+'</div>';
-    html += '<h2 class="section-title">'+sectionLabel+'</h2>';
+    html += '<div class="crumb">'+escapeHtml(pageDisplayLabel(page))+'</div>';
+    html += '<h2 class="section-title">'+escapeHtml(sectionLabel)+'</h2>';
     if(section.desc) html += '<p class="section-desc">'+section.desc[state.lang]+'</p>';
 
     if(state.isAdmin){
@@ -3636,6 +3771,7 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
   loadSiteTheme();
   loadFooterInfo();
   loadCustomPages();
+  loadPageLabelOverrides();
 
   var toTopBtn = document.getElementById('toTopBtn');
   if(toTopBtn){
