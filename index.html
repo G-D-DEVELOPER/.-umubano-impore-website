@@ -396,6 +396,12 @@
     background:rgba(255,255,255,0.92); border:1px solid var(--green-bright); color:var(--green-deep);
     border-radius:8px; font-size:11.5px; padding:4px 9px; font-weight:700;
   }
+  .mp-order-btn{
+    background:var(--green-pale); border:1px solid var(--green-line); color:var(--green-deep);
+    border-radius:4px; width:22px; height:16px; font-size:9px; line-height:1;
+    padding:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .mp-order-btn:disabled{opacity:0.3; cursor:default;}
   .feed-nav{
     position:absolute; top:45%; transform:translateY(-50%); z-index:5;
     background:var(--white); border:1px solid var(--green-line); color:var(--green-deep);
@@ -758,7 +764,7 @@
       pageTitleEditBtn:'Edit page title', pageTitleLabel:'Name shown on this page\u2019s photo',
       backBtn:'Back',
       managePagesNav:'Manage pages', managePagesTitle:'Manage pages',
-      renamePagesHeading:'Rename pages', renamePagesBtn:'Save names', pageNamesSaved:'Page names saved.',
+      renamePagesHeading:'Rename & reorder pages — use the arrows to change the order', renamePagesBtn:'Save changes', pageNamesSaved:'Page names and order saved.',
       managePagesHint:'Add whole new pages to the site, each with its own posts. The built-in pages (Home, Our non-profit organisation, Projects, Join in, Contact, Sponsors) can’t be removed, but any page you add here can be renamed or deleted again.',
       addPageHeading:'Add a new page', pageNameEn:'Page name (English)', pageNameFr:'Page name (French, optional)', pageNameRw:'Page name (Kinyarwanda, optional)',
       addPageBtn:'Add page', noCustomPages:'No pages added yet.',
@@ -830,7 +836,7 @@
       pageTitleEditBtn:'Modifier le titre de la page', pageTitleLabel:'Nom affiché sur la photo de cette page',
       backBtn:'Retour',
       managePagesNav:'Gérer les pages', managePagesTitle:'Gérer les pages',
-      renamePagesHeading:'Renommer les pages', renamePagesBtn:'Enregistrer les noms', pageNamesSaved:'Noms des pages enregistrés.',
+      renamePagesHeading:"Renommer et réorganiser les pages — utilisez les flèches pour changer l'ordre", renamePagesBtn:'Enregistrer les modifications', pageNamesSaved:'Noms et ordre des pages enregistrés.',
       managePagesHint:"Ajoutez de nouvelles pages au site, chacune avec ses propres publications. Les pages intégrées (Accueil, Notre association, Projets, Participer, Contact, Sponsors) ne peuvent pas être supprimées, mais toute page ajoutée ici peut être renommée ou supprimée.",
       addPageHeading:'Ajouter une nouvelle page', pageNameEn:'Nom de la page (anglais)', pageNameFr:'Nom de la page (français, facultatif)', pageNameRw:'Nom de la page (kinyarwanda, facultatif)',
       addPageBtn:'Ajouter la page', noCustomPages:'Aucune page ajoutée pour le moment.',
@@ -903,7 +909,7 @@
       pageTitleEditBtn:'Hindura umutwe w’urupapuro', pageTitleLabel:'Izina rigaragara ku ifoto y’uru rupapuro',
       backBtn:'Subira inyuma',
       managePagesNav:'Gucunga amapaji', managePagesTitle:'Gucunga amapaji',
-      renamePagesHeading:'Hindura amazina y\'amapaji', renamePagesBtn:'Bika amazina', pageNamesSaved:'Amazina y\'amapaji yabitswe.',
+      renamePagesHeading:"Hindura amazina no gutondeka amapaji — koresha imyambi kugira ngo uhindure uko atondekwa", renamePagesBtn:'Bika impinduka', pageNamesSaved:"Amazina n'uko amapaji atondekwa byabitswe.",
       managePagesHint:"Ongeraho amapaji mashya ku rubuga, buri imwe ifite amakuru yayo bwite. Amapaji asanzwe (Ahabanza, Umuryango wacu, Imishinga, Twifatanye, Twandikire, Abaterankunga) ntashobora gusibwa, ariko ipaji iyo ari yo yose wongeyeho hano ushobora kuyihindura izina cyangwa kuyisiba.",
       addPageHeading:'Ongeraho ipaji nshya', pageNameEn:'Izina ry\'ipaji (Icyongereza)', pageNameFr:'Izina ry\'ipaji (Igifaransa, si ngombwa)', pageNameRw:'Izina ry\'ipaji (Ikinyarwanda, si ngombwa)',
       addPageBtn:'Ongeraho ipaji', noCustomPages:'Nta paji yongewemo kugeza ubu.',
@@ -938,7 +944,8 @@
     viewingPost:null, // the single post currently shown full-page via "Read more", or null
     siteTheme:null, // { accent, pageBg, headingFont, bodyFont } once loaded
     footerInfo:null, // address / phone / e-mail / social links shown in the footer
-    pageLabelOverrides:{} // key "page_<id>" or "section_<pageId>_<secId>" -> admin-chosen name
+    pageLabelOverrides:{}, // key "page_<id>" or "section_<pageId>_<secId>" -> admin-chosen name
+    navOrder:{ pages:[], sections:{} } // pages: ordered id array; sections: pageId -> ordered id array
   };
 
   var pageWrap = document.getElementById('pageWrap');
@@ -989,6 +996,44 @@
       return false;
     }
   }
+
+  // Admin can put pages, and the sub-pages within each page, in whatever order
+  // they want — the order is stored as a plain list of ids, so anything not yet
+  // mentioned in a saved order (a brand new page, say) just falls back to
+  // appearing at the end in its natural order rather than disappearing.
+  async function loadNavOrder(){
+    try{
+      var res = await siteStorage.get('nav_order_v1', true);
+      state.navOrder = (res && res.value) ? JSON.parse(res.value) : { pages:[], sections:{} };
+    }catch(err){
+      state.navOrder = { pages:[], sections:{} };
+    }
+    if(!state.navOrder.sections) state.navOrder.sections = {};
+    renderSidebar();
+    renderFooter();
+  }
+
+  async function saveNavOrder(onRetry){
+    try{
+      await withRetry(function(){ return siteStorage.set('nav_order_v1', JSON.stringify(state.navOrder), true); }, onRetry);
+      return true;
+    }catch(err){
+      lastStorageError = err; console.error('Storage error', err);
+      return false;
+    }
+  }
+
+  function applyOrder(items, orderIds){
+    if(!orderIds || !orderIds.length) return items.slice();
+    var byId = {};
+    items.forEach(function(it){ byId[it.id] = it; });
+    var ordered = orderIds.map(function(id){ return byId[id]; }).filter(Boolean);
+    items.forEach(function(it){ if(ordered.indexOf(it)===-1) ordered.push(it); });
+    return ordered;
+  }
+  function orderedPages(){ return applyOrder(allPages(), state.navOrder.pages); }
+  function orderedSections(page){ return applyOrder(page.sections, state.navOrder.sections[page.id]); }
+
   function storageKey(pageId, secId){ return 'posts_'+pageId+'_'+secId; }
 
   // ---------------- sidebar ----------------
@@ -1006,7 +1051,7 @@
     });
     sidebarNav.appendChild(homeBtn);
 
-    allPages().filter(function(p){return !p.hidden;}).forEach(function(p){
+    orderedPages().filter(function(p){return !p.hidden;}).forEach(function(p){
       var group = document.createElement('div');
       group.className='nav-group'+(state.openGroup===p.id?' open':'');
       var btn = document.createElement('button');
@@ -1020,7 +1065,7 @@
 
       var sub = document.createElement('div');
       sub.className='nav-sub';
-      p.sections.forEach(function(s){
+      orderedSections(p).forEach(function(s){
         var sbtn = document.createElement('button');
         sbtn.className='nav-sub-btn'+((state.currentPage===p.id && state.currentSection===s.id)?' active':'');
         sbtn.textContent = sectionDisplayLabel(p, s);
@@ -2263,11 +2308,12 @@
     html += '<div class="footer-col footer-sitemap-col"><h4>'+escapeHtml(t('footerSiteMap'))+'</h4>'+
             '<button class="footer-link" data-nav="home:home">'+escapeHtml(t('home'))+'</button>'+
             '<div class="footer-sitemap">';
-    allPages().filter(function(p){ return !p.hidden && p.id!=='settings'; }).forEach(function(p){
+    orderedPages().filter(function(p){ return !p.hidden && p.id!=='settings'; }).forEach(function(p){
+      var pSections = orderedSections(p);
       html += '<div class="sitemap-group">'+
-                '<button class="sitemap-heading" data-nav="'+p.id+':'+p.sections[0].id+'">'+escapeHtml(pageDisplayLabel(p))+'</button>'+
+                '<button class="sitemap-heading" data-nav="'+p.id+':'+pSections[0].id+'">'+escapeHtml(pageDisplayLabel(p))+'</button>'+
                 '<ul class="sitemap-list">';
-      p.sections.forEach(function(s){
+      pSections.forEach(function(s){
         html += '<li><button class="footer-link sub" data-nav="'+p.id+':'+s.id+'">'+escapeHtml(sectionDisplayLabel(p, s))+'</button></li>';
       });
       html += '</ul></div>';
@@ -2507,19 +2553,76 @@
     }
     renderList();
 
-    function renderRenameList(){
+    // Working copies of the order, edited live as the up/down arrows are
+    // clicked, and only written to storage once "Save changes" is pressed.
+    var pagesById = {}; allPages().forEach(function(p){ pagesById[p.id] = p; });
+    var workingPageOrder = orderedPages().filter(function(p){ return p.id!=='settings'; }).map(function(p){ return p.id; });
+    var workingSectionOrder = {};
+    allPages().forEach(function(p){ workingSectionOrder[p.id] = orderedSections(p).map(function(s){ return s.id; }); });
+
+    function captureInputValues(){
+      var vals = { pages:{}, sections:{} };
+      box.querySelectorAll('[data-rename-page]').forEach(function(input){ vals.pages[input.getAttribute('data-rename-page')] = input.value; });
+      box.querySelectorAll('[data-rename-section]').forEach(function(input){ vals.sections[input.getAttribute('data-rename-section')] = input.value; });
+      return vals;
+    }
+
+    function renderRenameList(preserved){
       var el = box.querySelector('#mpRenameList');
-      el.innerHTML = allPages().filter(function(p){ return p.id!=='settings'; }).map(function(p){
-        var sectionsHtml = p.sections.map(function(s){
-          return '<input type="text" data-rename-section="'+p.id+'|'+s.id+'" class="composer-title-input" '+
-            'value="'+escapeHtml(sectionDisplayLabel(p, s))+'" style="margin:4px 0 4px 20px; width:calc(100% - 20px);">';
+      el.innerHTML = workingPageOrder.map(function(pid, pIdx, arr){
+        var p = pagesById[pid];
+        if(!p) return '';
+        var secById = {}; p.sections.forEach(function(s){ secById[s.id] = s; });
+        var secIds = workingSectionOrder[pid] || p.sections.map(function(s){ return s.id; });
+        var sectionsHtml = secIds.map(function(sid, sIdx, sArr){
+          var s = secById[sid];
+          if(!s) return '';
+          var key = pid+'|'+sid;
+          var val = (preserved && preserved.sections[key]!==undefined) ? preserved.sections[key] : sectionDisplayLabel(p, s);
+          return '<div style="display:flex; align-items:center; gap:6px; margin:4px 0 4px 20px;">'+
+            '<span style="display:flex; flex-direction:column; gap:1px;">'+
+              '<button type="button" class="mp-order-btn" data-move-section="'+key+'|up"'+(sIdx===0?' disabled':'')+'>&#9650;</button>'+
+              '<button type="button" class="mp-order-btn" data-move-section="'+key+'|down"'+(sIdx===sArr.length-1?' disabled':'')+'>&#9660;</button>'+
+            '</span>'+
+            '<input type="text" data-rename-section="'+key+'" class="composer-title-input" value="'+escapeHtml(val)+'" style="flex:1;">'+
+          '</div>';
         }).join('');
-        return '<div style="margin-bottom:10px;">'+
-          '<input type="text" data-rename-page="'+p.id+'" class="composer-title-input" '+
-          'value="'+escapeHtml(pageDisplayLabel(p))+'" style="font-weight:700;">'+
+        var pval = (preserved && preserved.pages[pid]!==undefined) ? preserved.pages[pid] : pageDisplayLabel(p);
+        return '<div style="margin-bottom:10px; border-top:1px solid var(--green-line); padding-top:8px;">'+
+          '<div style="display:flex; align-items:center; gap:6px;">'+
+            '<span style="display:flex; flex-direction:column; gap:1px;">'+
+              '<button type="button" class="mp-order-btn" data-move-page="'+pid+'|up"'+(pIdx===0?' disabled':'')+'>&#9650;</button>'+
+              '<button type="button" class="mp-order-btn" data-move-page="'+pid+'|down"'+(pIdx===arr.length-1?' disabled':'')+'>&#9660;</button>'+
+            '</span>'+
+            '<input type="text" data-rename-page="'+pid+'" class="composer-title-input" value="'+escapeHtml(pval)+'" style="flex:1; font-weight:700;">'+
+          '</div>'+
           sectionsHtml+
         '</div>';
       }).join('');
+
+      el.querySelectorAll('[data-move-page]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var parts = btn.getAttribute('data-move-page').split('|');
+          var idx = workingPageOrder.indexOf(parts[0]);
+          var swapWith = parts[1]==='up' ? idx-1 : idx+1;
+          if(swapWith<0 || swapWith>=workingPageOrder.length) return;
+          var preservedVals = captureInputValues();
+          var tmp = workingPageOrder[idx]; workingPageOrder[idx] = workingPageOrder[swapWith]; workingPageOrder[swapWith] = tmp;
+          renderRenameList(preservedVals);
+        });
+      });
+      el.querySelectorAll('[data-move-section]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var parts = btn.getAttribute('data-move-section').split('|');
+          var arr2 = workingSectionOrder[parts[0]];
+          var idx = arr2.indexOf(parts[1]);
+          var swapWith = parts[2]==='up' ? idx-1 : idx+1;
+          if(swapWith<0 || swapWith>=arr2.length) return;
+          var preservedVals = captureInputValues();
+          var tmp = arr2[idx]; arr2[idx] = arr2[swapWith]; arr2[swapWith] = tmp;
+          renderRenameList(preservedVals);
+        });
+      });
     }
     renderRenameList();
 
@@ -2546,13 +2649,18 @@
         else next[key] = val;
       });
       state.pageLabelOverrides = next;
-      var ok = await savePageLabelOverrides(function(){ saveBtn.textContent = t('retrying'); });
+      var beforeOrder = JSON.parse(JSON.stringify(state.navOrder));
+      state.navOrder = { pages: workingPageOrder.slice(), sections: JSON.parse(JSON.stringify(workingSectionOrder)) };
+
+      var okLabels = await savePageLabelOverrides(function(){ saveBtn.textContent = t('retrying'); });
+      var okOrder = okLabels ? await saveNavOrder(function(){ saveBtn.textContent = t('retrying'); }) : false;
       saveBtn.disabled = false; saveBtn.textContent = t('renamePagesBtn');
-      if(ok){
+      if(okLabels && okOrder){
         renderSidebar(); renderFooter(); renderRenameList();
         showToast(t('pageNamesSaved'));
       } else {
         state.pageLabelOverrides = before;
+        state.navOrder = beforeOrder;
         showToast(saveErrorMessage(), true);
       }
     });
@@ -3772,6 +3880,7 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
   loadFooterInfo();
   loadCustomPages();
   loadPageLabelOverrides();
+  loadNavOrder();
 
   var toTopBtn = document.getElementById('toTopBtn');
   if(toTopBtn){
