@@ -1305,19 +1305,22 @@
       if(!response.ok){
         var errBody = await response.text().catch(function(){return '';});
         console.error('Translation request failed', response.status, errBody);
-        return text; // don't cache a failure — retry next time
+        return ''; // blank, not the English text — a caller must never mistake this for a real translation
       }
       var data = await response.json();
       var out = (data.content||[]).map(function(b){return b.type==='text'?b.text:'';}).join('').trim();
       if(!out){
         console.error('Translation returned no text', data);
-        return text; // don't cache a failure — retry next time
+        return '';
       }
       state.translationCache[cacheKey] = out;
       return out;
     }catch(err){
+      // This is the expected path outside Claude.ai, where this direct API call
+      // cannot succeed (no bridge/API key available from the browser) — blank
+      // means "not translated", never a silent copy of the English text.
       console.error('Translation error', err);
-      return text; // don't cache a failure — retry next time
+      return '';
     }
   }
 
@@ -3664,6 +3667,18 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
       var post;
       if(editingPostId){
         var existing = (state.posts[mapKey]||[]).find(function(p){ return p.id===editingPostId; });
+        // A blank French/Kinyarwanda field when saving an edit almost never means
+        // "erase this translation" — it usually just means the admin only touched
+        // the English tab. Keep whatever was already saved for a language unless
+        // the admin actually typed something new into it.
+        if(existing){
+          if(!titleObj.fr && existing.title && existing.title.fr) titleObj.fr = existing.title.fr;
+          if(!titleObj.rw && existing.title && existing.title.rw) titleObj.rw = existing.title.rw;
+          if(!textObj.fr && existing.text && existing.text.fr) textObj.fr = existing.text.fr;
+          if(!textObj.rw && existing.text && existing.text.rw) textObj.rw = existing.text.rw;
+          if(!tagObj.fr && existing.tag && existing.tag.fr) tagObj.fr = existing.tag.fr;
+          if(!tagObj.rw && existing.tag && existing.tag.rw) tagObj.rw = existing.tag.rw;
+        }
         post = {
           id: editingPostId, title:titleObj, text:textObj, tag:tagObj,
           image: mediaArr.length ? mediaArr[0].image : null,
