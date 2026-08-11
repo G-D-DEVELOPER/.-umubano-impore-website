@@ -631,6 +631,16 @@
           var res = await q;
           if(res.error) throw res.error;
           return { keys: (res.data||[]).map(function(r){ return r.key; }) };
+        },
+        // Fetches every key AND its value matching a prefix in one round trip,
+        // instead of listing keys and then fetching each one separately — this is
+        // what makes a page's posts appear quickly instead of one request per post.
+        listValues: async function(prefix){
+          var q = supabaseClient.from('kv_store').select('key,value');
+          q = prefix ? q.like('key', prefix+'%') : q.like('key', '%');
+          var res = await q;
+          if(res.error) throw res.error;
+          return { items: (res.data||[]).map(function(r){ return { key:r.key, value:r.value }; }) };
         }
       };
     }
@@ -665,6 +675,17 @@
           }
         }
         return { keys:keys };
+      }); },
+      listValues: function(prefix){ return later(function(){
+        var items = [];
+        for(var i=0;i<localStorage.length;i++){
+          var full = localStorage.key(i);
+          if(full && full.indexOf(PREFIX)===0){
+            var bare = full.slice(PREFIX.length);
+            if(bare.indexOf(prefix||'')===0) items.push({ key:bare, value:localStorage.getItem(full) });
+          }
+        }
+        return { items:items };
       }); }
     };
   })();
@@ -1286,41 +1307,86 @@
   }
 
   // ---------------- translation (via Claude API) ----------------
+  // Free, keyless translation — works from any browser, on any hosting, with no
+  // account or API key. This is the primary path now that the site runs outside
+  // Claude.ai most of the time. A single call is kept under roughly 1500
+  // characters (comfortably inside every browser/server's URL length limit) by
+  // splitting longer text into paragraphs, and further into sentences if a
+  // single paragraph is still too long, then rejoining the translated pieces in
+  // the same shape as the original.
+  var GOOGLE_LANG_CODE = { fr:'fr', rw:'rw' };
+  var MAX_TRANSLATE_CHUNK = 1500;
+
+  async function translateChunkViaGoogle(chunk, targetCode){
+    if(!chunk) return '';
+    var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl='+GOOGLE_LANG_CODE[targetCode]+'&dt=t&q='+encodeURIComponent(chunk);
+    var response = await fetch(url);
+    if(!response.ok) throw new Error('Translate request failed: '+response.status);
+    var data = await response.json();
+    var segments = data && data[0];
+    if(!segments || !segments.length) throw new Error('Translate returned no segments');
+    return segments.map(function(seg){ return seg[0] || ''; }).join('');
+  }
+
+  function splitForTranslation(text){
+    var paragraphs = text.split(/\n\n+/);
+    var chunks = [];
+    paragraphs.forEach(function(para, i){
+      if(para.length <= MAX_TRANSLATE_CHUNK){
+        chunks.push({ text:para, sep: i<paragraphs.length-1 ? '\n\n' : '' });
+      } else {
+        var sentences = splitIntoSentences(para);
+        sentences.forEach(function(s, j){
+          chunks.push({ text:s, sep: j<sentences.length-1 ? '' : (i<paragraphs.length-1 ? '\n\n' : '') });
+        });
+      }
+    });
+    return chunks;
+  }
+
+  async function translateViaGoogle(text, targetCode){
+    var chunks = splitForTranslation(text);
+    var translated = await Promise.all(chunks.map(function(c){ return translateChunkViaGoogle(c.text, targetCode); }));
+    return translated.map(function(t, i){ return t + chunks[i].sep; }).join('');
+  }
+
+  async function translateViaClaudeBridge(text, targetCode){
+    var response = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        model:"claude-sonnet-4-6",
+        max_tokens:2000,
+        system:"Translate the user's message into "+LANG_API_NAME[targetCode]+". Reply with only the translated text and nothing else, no preamble, no quotation marks, no explanation.",
+        messages:[{ role:"user", content:text }]
+      })
+    });
+    if(!response.ok) throw new Error('Claude bridge translate failed: '+response.status);
+    var data = await response.json();
+    var out = (data.content||[]).map(function(b){return b.type==='text'?b.text:'';}).join('').trim();
+    if(!out) throw new Error('Claude bridge returned no text');
+    return out;
+  }
+
   async function translateText(text, targetCode){
     if(!text) return text;
     if(targetCode==='en') return text; // site content is authored in English by default
     var cacheKey = text+'|'+targetCode;
     if(state.translationCache[cacheKey]) return state.translationCache[cacheKey];
     try{
-      var response = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({
-          model:"claude-sonnet-4-6",
-          max_tokens:1000,
-          system:"Translate the user's message into "+LANG_API_NAME[targetCode]+". Reply with only the translated text and nothing else \u2014 no preamble, no quotation marks, no explanation.",
-          messages:[{ role:"user", content:text }]
-        })
-      });
-      if(!response.ok){
-        var errBody = await response.text().catch(function(){return '';});
-        console.error('Translation request failed', response.status, errBody);
-        return ''; // blank, not the English text — a caller must never mistake this for a real translation
-      }
-      var data = await response.json();
-      var out = (data.content||[]).map(function(b){return b.type==='text'?b.text:'';}).join('').trim();
-      if(!out){
-        console.error('Translation returned no text', data);
-        return '';
-      }
+      var out = await translateViaGoogle(text, targetCode);
       state.translationCache[cacheKey] = out;
       return out;
     }catch(err){
-      // This is the expected path outside Claude.ai, where this direct API call
-      // cannot succeed (no bridge/API key available from the browser) — blank
-      // means "not translated", never a silent copy of the English text.
-      console.error('Translation error', err);
-      return '';
+      console.error('Translation error (free service)', err);
+      try{
+        var fallback = await translateViaClaudeBridge(text, targetCode);
+        state.translationCache[cacheKey] = fallback;
+        return fallback;
+      }catch(err2){
+        console.error('Translation error (Claude bridge)', err2);
+        return '';
+      }
     }
   }
 
@@ -2786,21 +2852,37 @@
     var mapKey = pageId+':'+secId;
     state.loading[mapKey] = true;
     try{
-      await migrateLegacyPostsIfNeeded(pageId, secId);
-      var listRes = await withRetry(function(){ return siteStorage.list(postKeyPrefix(pageId, secId), true); });
-      var keys = (listRes && listRes.keys) || [];
-      var results = await Promise.all(keys.map(function(k){
-        return withRetry(function(){ return siteStorage.get(k, true); }).catch(function(){ return null; });
-      }));
-      var posts = results
-        .filter(function(res){ return res && res.value; })
-        .map(function(res){ return normalizeLegacyPost(JSON.parse(res.value)); });
+      // Fetch every post's key AND value in a single round trip (instead of listing
+      // keys and then fetching each one separately) — this is what makes posts
+      // appear quickly instead of visibly loading one at a time. The old-format
+      // migration check and the legacy combined-entry safety net run at the same
+      // time rather than one after another, since none of the three depend on
+      // each other's result.
+      var prefix = postKeyPrefix(pageId, secId);
+      var listPromise = (typeof siteStorage.listValues === 'function')
+        ? withRetry(function(){ return siteStorage.listValues(prefix, true); })
+        : withRetry(function(){ return siteStorage.list(prefix, true); }).then(async function(listRes){
+            var keys = (listRes && listRes.keys) || [];
+            var results = await Promise.all(keys.map(function(k){
+              return withRetry(function(){ return siteStorage.get(k, true); }).catch(function(){ return null; });
+            }));
+            return { items: results.map(function(res, i){ return res && res.value ? { key:keys[i], value:res.value } : null; }).filter(Boolean) };
+          });
+      var oldKeyPromise = siteStorage.get(storageKey(pageId, secId), true).catch(function(){ return null; });
+      var migratePromise = migrateLegacyPostsIfNeeded(pageId, secId).catch(function(){ /* best-effort */ });
+
+      var listRes = await listPromise;
+      await migratePromise;
+      var oldRes = await oldKeyPromise;
+
+      var posts = (listRes && listRes.items || [])
+        .filter(function(item){ return item && item.value; })
+        .map(function(item){ return normalizeLegacyPost(JSON.parse(item.value)); });
 
       // Safety net: if the old combined entry still exists for any reason (e.g. migration
       // couldn't fully complete), merge in any posts from it that aren't already accounted for,
       // so nothing a person already published ever appears to have disappeared.
       try{
-        var oldRes = await siteStorage.get(storageKey(pageId, secId), true);
         if(oldRes && oldRes.value){
           var oldArr = JSON.parse(oldRes.value);
           var existingIds = {};
@@ -3664,21 +3746,45 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
         if(m.type==='video') entry.video = m.video; else entry.image = m.image;
         return entry;
       });
+      var existing = editingPostId ? (state.posts[mapKey]||[]).find(function(p){ return p.id===editingPostId; }) : null;
+      // A blank French/Kinyarwanda field when saving an edit almost never means
+      // "erase this translation" — it usually just means the admin only touched
+      // the English tab. Keep whatever was already saved for a language unless
+      // the admin actually typed something new into it.
+      if(existing){
+        if(!titleObj.fr && existing.title && existing.title.fr) titleObj.fr = existing.title.fr;
+        if(!titleObj.rw && existing.title && existing.title.rw) titleObj.rw = existing.title.rw;
+        if(!textObj.fr && existing.text && existing.text.fr) textObj.fr = existing.text.fr;
+        if(!textObj.rw && existing.text && existing.text.rw) textObj.rw = existing.text.rw;
+        if(!tagObj.fr && existing.tag && existing.tag.fr) tagObj.fr = existing.tag.fr;
+        if(!tagObj.rw && existing.tag && existing.tag.rw) tagObj.rw = existing.tag.rw;
+      }
+
+      // Fill in anything still blank automatically — this is what makes a newly
+      // published post already readable in French and Kinyarwanda right away,
+      // instead of staying in English until someone remembers to translate it
+      // by hand. Uses the free translation service (see translateText above);
+      // if that's ever unreachable, the field is simply left as it was rather
+      // than blocking the whole publish.
+      var autoCalls = [];
+      if(!titleObj.fr && titleObj.en) autoCalls.push(translateText(titleObj.en,'fr').then(function(v){ if(v) titleObj.fr = v; }));
+      if(!titleObj.rw && titleObj.en) autoCalls.push(translateText(titleObj.en,'rw').then(function(v){ if(v) titleObj.rw = v; }));
+      if(!textObj.fr && textObj.en) autoCalls.push(translateText(textObj.en,'fr').then(function(v){ if(v) textObj.fr = v; }));
+      if(!textObj.rw && textObj.en) autoCalls.push(translateText(textObj.en,'rw').then(function(v){ if(v) textObj.rw = v; }));
+      if(!tagObj.fr && tagObj.en) autoCalls.push(translateText(tagObj.en,'fr').then(function(v){ if(v) tagObj.fr = v; }));
+      if(!tagObj.rw && tagObj.en) autoCalls.push(translateText(tagObj.en,'rw').then(function(v){ if(v) tagObj.rw = v; }));
+      mediaArr.forEach(function(m){
+        if(!m.caption.fr && m.caption.en) autoCalls.push(translateText(m.caption.en,'fr').then(function(v){ if(v) m.caption.fr = v; }));
+        if(!m.caption.rw && m.caption.en) autoCalls.push(translateText(m.caption.en,'rw').then(function(v){ if(v) m.caption.rw = v; }));
+      });
+      if(autoCalls.length){
+        if(btn && btn.isConnected) btn.textContent = t('translating');
+        await Promise.all(autoCalls);
+        if(btn && btn.isConnected) btn.textContent = editingPostId ? t('saving') : t('publishing');
+      }
+
       var post;
       if(editingPostId){
-        var existing = (state.posts[mapKey]||[]).find(function(p){ return p.id===editingPostId; });
-        // A blank French/Kinyarwanda field when saving an edit almost never means
-        // "erase this translation" — it usually just means the admin only touched
-        // the English tab. Keep whatever was already saved for a language unless
-        // the admin actually typed something new into it.
-        if(existing){
-          if(!titleObj.fr && existing.title && existing.title.fr) titleObj.fr = existing.title.fr;
-          if(!titleObj.rw && existing.title && existing.title.rw) titleObj.rw = existing.title.rw;
-          if(!textObj.fr && existing.text && existing.text.fr) textObj.fr = existing.text.fr;
-          if(!textObj.rw && existing.text && existing.text.rw) textObj.rw = existing.text.rw;
-          if(!tagObj.fr && existing.tag && existing.tag.fr) tagObj.fr = existing.tag.fr;
-          if(!tagObj.rw && existing.tag && existing.tag.rw) tagObj.rw = existing.tag.rw;
-        }
         post = {
           id: editingPostId, title:titleObj, text:textObj, tag:tagObj,
           image: mediaArr.length ? mediaArr[0].image : null,
