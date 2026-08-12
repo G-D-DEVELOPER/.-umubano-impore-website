@@ -2926,6 +2926,7 @@
       posts = applyOrder(posts, orderIds);
 
       state.posts[mapKey] = posts;
+      writePostsCache(pageId, secId, posts);
     }catch(err){
       // A failed reload (e.g. a rate limit) must never erase posts that were already
       // showing — only replace the list once we actually have a fresh one. If nothing
@@ -2934,6 +2935,24 @@
       console.error('Could not reload posts, keeping what was already shown', err);
     }
     state.loading[mapKey] = false;
+  }
+
+  // A local, per-browser cache of the last-seen posts for each page, so a
+  // returning visitor sees content the instant the page paints instead of
+  // staring at an empty feed until the database round trip finishes. This is
+  // separate from siteStorage's own localStorage fallback (different key
+  // prefix) — it's purely a speed cache, always overwritten by whatever the
+  // database actually returns moments later.
+  function postsCacheKey(pageId, secId){ return 'pcache_v1_'+pageId+'_'+secId; }
+  function readPostsCache(pageId, secId){
+    try{
+      var raw = localStorage.getItem(postsCacheKey(pageId, secId));
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+  function writePostsCache(pageId, secId, posts){
+    try{ localStorage.setItem(postsCacheKey(pageId, secId), JSON.stringify(posts)); }
+    catch(e){ /* storage full/unavailable — fine to skip, it's only a speed cache */ }
   }
 
   async function saveSinglePost(pageId, secId, post, onRetry){
@@ -3132,8 +3151,17 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
 
     renderStoryView();
 
+    // Show whatever posts we already have — from this session's memory, or
+    // from last time this browser visited — immediately, so there's never a
+    // blank wait. The real database fetch still runs and quietly replaces
+    // this with fresh data (only re-rendering if the visitor is still on
+    // this page when it lands).
+    var homeMapKey = 'home:home';
+    var homeCached = state.posts[homeMapKey] || readPostsCache('home', 'home');
+    if(homeCached){ state.posts[homeMapKey] = homeCached; renderFeed('home', 'home'); }
+
     await loadPosts('home', 'home');
-    renderFeed('home', 'home');
+    if(state.currentPage==='home'){ renderFeed('home', 'home'); }
   }
 
   // Splits a block of text into individual sentences (best-effort) so each one
@@ -3560,12 +3588,19 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
       wireComposer(pageId, secId, sectionLabel);
     }
 
-    if(state.pageHeaders[mapKey]===undefined) await loadPageHeader(pageId, secId);
-    if(state.pageTitles[mapKey]===undefined) await loadPageTitle(pageId, secId);
+    var headerPromise = state.pageHeaders[mapKey]===undefined ? loadPageHeader(pageId, secId) : Promise.resolve();
+    var titlePromise = state.pageTitles[mapKey]===undefined ? loadPageTitle(pageId, secId) : Promise.resolve();
+    await Promise.all([headerPromise, titlePromise]);
     renderPageHeaderArea(pageId, secId);
 
+    // Show whatever posts we already have (this session, or a cache saved
+    // last time this browser visited this page) right away, then quietly
+    // replace it with fresh data once the real fetch lands.
+    var cached = state.posts[mapKey] || readPostsCache(pageId, secId);
+    if(cached){ state.posts[mapKey] = cached; renderFeed(pageId, secId); }
+
     await loadPosts(pageId, secId);
-    renderFeed(pageId, secId);
+    if(state.currentPage===pageId && state.currentSection===secId){ renderFeed(pageId, secId); }
   }
 
   function wireComposer(pageId, secId, sectionLabel){
