@@ -780,6 +780,8 @@
       backupLoadFailed:'Could not load everything. Wait about a minute and try again — nothing was lost.',
       storageFullError:'There is no room left to save. Photos and videos take up the most space — try removing an old post with many photos, or use smaller photos.',
       ourPostsHeading:'Our posts', heroCtaBtn:'Read more', tagPlaceholder:'Tag / category (optional)',
+      arrangePostsBtn:'Arrange posts', arrangePostsTitle:'Arrange posts',
+      arrangePostsHint:'Use the arrows to choose which posts show first. Posts you don’t arrange stay in place after the ones you’ve arranged, newest first.',
       footer:'This site is view-only for visitors \u2014 only organisation admins can publish updates.',
       footerTagline:'Providing a brighter future for Rwanda\u2019s children.',
       pageTitleEditBtn:'Edit page title', pageTitleLabel:'Name shown on this page\u2019s photo',
@@ -853,6 +855,8 @@
       backupLoadFailed:"Impossible de tout charger. Patientez environ une minute et réessayez — rien n'a été perdu.",
       storageFullError:"Il n'y a plus de place pour enregistrer. Les photos et vidéos prennent le plus de place — essayez de supprimer une ancienne publication contenant beaucoup de photos, ou utilisez des photos plus petites.",
       ourPostsHeading:'Nos publications', heroCtaBtn:'Lire la suite', tagPlaceholder:'Étiquette / catégorie (facultatif)',
+      arrangePostsBtn:'Organiser les publications', arrangePostsTitle:'Organiser les publications',
+      arrangePostsHint:"Utilisez les flèches pour choisir les publications à afficher en premier. Les publications non organisées restent après celles-ci, les plus récentes en premier.",
       footerTagline:'Offrir un avenir meilleur aux enfants du Rwanda.',
       pageTitleEditBtn:'Modifier le titre de la page', pageTitleLabel:'Nom affiché sur la photo de cette page',
       backBtn:'Retour',
@@ -926,6 +930,8 @@
       backupLoadFailed:'Ntibyashobotse gushyiramo byose. Tegereza umunota umwe hanyuma ugerageze nanone — nta kintu cyabuze.',
       storageFullError:'Nta mwanya usigaye wo kubika. Amafoto na videwo bifata umwanya munini — gerageza gusiba inyandiko ishaje ifite amafoto menshi, cyangwa ukoreshe amafoto mato.',
       ourPostsHeading:'Amakuru yacu', heroCtaBtn:'Soma ibindi', tagPlaceholder:"Ikirango/icyiciro (si ngombwa)",
+      arrangePostsBtn:'Tondeka amakuru', arrangePostsTitle:'Tondeka amakuru',
+      arrangePostsHint:'Koresha imyambi guhitamo amakuru azabanza kugaragara. Amakuru utatondetse azasigara inyuma y’ayo watondetse, ashya mbere.',
       footerTagline:"Guha abana b'u Rwanda ejo hazaza heza.",
       pageTitleEditBtn:'Hindura umutwe w’urupapuro', pageTitleLabel:'Izina rigaragara ku ifoto y’uru rupapuro',
       backBtn:'Subira inyuma',
@@ -966,7 +972,8 @@
     siteTheme:null, // { accent, pageBg, headingFont, bodyFont } once loaded
     footerInfo:null, // address / phone / e-mail / social links shown in the footer
     pageLabelOverrides:{}, // key "page_<id>" or "section_<pageId>_<secId>" -> admin-chosen name
-    navOrder:{ pages:[], sections:{} } // pages: ordered id array; sections: pageId -> ordered id array
+    navOrder:{ pages:[], sections:{} }, // pages: ordered id array; sections: pageId -> ordered id array
+    postOrder:{} // key "page:section" -> ordered post-id array (admin-arranged, front items shown first)
   };
 
   var pageWrap = document.getElementById('pageWrap');
@@ -1505,6 +1512,18 @@
   // ---------------- storage ----------------
   function postKeyPrefix(pageId, secId){ return 'post_'+pageId+'_'+secId+'_'; }
   function postKey(pageId, secId, postId){ return postKeyPrefix(pageId, secId)+postId; }
+  function postOrderKey(pageId, secId){ return 'post_order_'+pageId+'_'+secId; }
+
+  async function savePostOrder(pageId, secId, orderIds, onRetry){
+    try{
+      await withRetry(function(){ return siteStorage.set(postOrderKey(pageId, secId), JSON.stringify(orderIds), true); }, onRetry);
+      state.postOrder[pageId+':'+secId] = orderIds;
+      return true;
+    }catch(err){
+      lastStorageError = err; console.error('Storage error', err);
+      return false;
+    }
+  }
 
   // Guard against older posts saved before titles/multi-language text existed
   function normalizeLegacyPost(post){
@@ -2870,10 +2889,12 @@
           });
       var oldKeyPromise = siteStorage.get(storageKey(pageId, secId), true).catch(function(){ return null; });
       var migratePromise = migrateLegacyPostsIfNeeded(pageId, secId).catch(function(){ /* best-effort */ });
+      var orderPromise = siteStorage.get(postOrderKey(pageId, secId), true).catch(function(){ return null; });
 
       var listRes = await listPromise;
       await migratePromise;
       var oldRes = await oldKeyPromise;
+      var orderRes = await orderPromise;
 
       var posts = (listRes && listRes.items || [])
         .filter(function(item){ return item && item.value; })
@@ -2896,6 +2917,14 @@
 
       posts = await seedPageIfNeeded(pageId, secId, posts);
       posts.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+
+      // Admin-arranged order (if any) takes priority — posts placed with the up/down
+      // arrows show first, in the order chosen; anything not yet arranged falls in
+      // behind them, newest first, so a fresh post never gets "lost" off the end.
+      var orderIds = (orderRes && orderRes.value) ? JSON.parse(orderRes.value) : [];
+      state.postOrder[mapKey] = orderIds;
+      posts = applyOrder(posts, orderIds);
+
       state.posts[mapKey] = posts;
     }catch(err){
       // A failed reload (e.g. a rate limit) must never erase posts that were already
@@ -3885,7 +3914,11 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     var layout = (state.siteTheme && state.siteTheme.template) || 'carousel';
     var showCarouselNav = layout === 'carousel';
 
-    var html = '<h2 class="feed-section-title">'+t('ourPostsHeading')+'</h2><div class="feed-section-underline"></div>';
+    var html = '<h2 class="feed-section-title">'+t('ourPostsHeading')+'</h2>';
+    if(state.isAdmin && arr.length>1){
+      html += '<div style="text-align:center; margin-bottom:4px;"><button class="btn-ghost" id="arrangePostsBtn" type="button" style="padding:4px 14px; font-size:13px;">'+t('arrangePostsBtn')+'</button></div>';
+    }
+    html += '<div class="feed-section-underline"></div>';
     html += '<div class="feed-carousel-wrap">';
     if(showCarouselNav) html += '<button class="feed-nav feed-nav-prev" id="feedPrev" aria-label="Previous">&#8249;</button>';
     html += '<div class="feed-grid layout-'+layout+'" id="feedTrack">';
@@ -3983,7 +4016,79 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
           }
         });
       });
+      var arrangeBtn = document.getElementById('arrangePostsBtn');
+      if(arrangeBtn){
+        arrangeBtn.addEventListener('click', function(){ openArrangePostsPanel(pageId, secId); });
+      }
     }
+  }
+
+  function openArrangePostsPanel(pageId, secId){
+    var mapKey = pageId+':'+secId;
+    var posts = (state.posts[mapKey] || []).slice();
+    var bg = document.createElement('div');
+    bg.className = 'modal-bg open';
+    var box = document.createElement('div');
+    box.className = 'modal modal-wide';
+    box.innerHTML = '<h3>'+escapeHtml(t('arrangePostsTitle'))+'</h3>'+
+      '<p style="color:var(--muted); font-size:13.5px;">'+escapeHtml(t('arrangePostsHint'))+'</p>'+
+      '<div id="apList"></div>'+
+      '<div class="modal-actions">'+
+        '<button class="btn-solid" id="apSaveBtn">'+escapeHtml(t('renamePagesBtn'))+'</button>'+
+        '<button class="btn-solid" id="apClose">'+escapeHtml(t('cancel'))+'</button>'+
+      '</div>';
+    bg.appendChild(box);
+    document.body.appendChild(bg);
+    function cleanup(){ if(bg.parentNode) document.body.removeChild(bg); }
+    box.querySelector('#apClose').addEventListener('click', cleanup);
+    bg.addEventListener('click', function(e){ if(e.target===bg) cleanup(); });
+
+    // Working copy, edited live as the up/down arrows are clicked, only written
+    // to storage once "Save changes" is pressed — same pattern as Manage pages.
+    var workingOrder = posts.map(function(p){ return p.id; });
+    var byId = {}; posts.forEach(function(p){ byId[p.id] = p; });
+
+    function renderArrangeList(){
+      var el = box.querySelector('#apList');
+      el.innerHTML = workingOrder.map(function(id, idx, arr){
+        var p = byId[id];
+        if(!p) return '';
+        var title = (p.title && (p.title[state.lang] || p.title.en)) || '('+t('tagPlaceholder')+')';
+        return '<div style="display:flex; align-items:center; gap:10px; margin:6px 0; border-bottom:1px solid var(--green-line); padding-bottom:6px;">'+
+          '<span style="display:flex; flex-direction:column; gap:1px;">'+
+            '<button type="button" class="mp-order-btn" data-move-post="'+id+'|up"'+(idx===0?' disabled':'')+'>&#9650;</button>'+
+            '<button type="button" class="mp-order-btn" data-move-post="'+id+'|down"'+(idx===arr.length-1?' disabled':'')+'>&#9660;</button>'+
+          '</span>'+
+          '<span style="flex:1;">'+escapeHtml(title)+'</span>'+
+        '</div>';
+      }).join('');
+      el.querySelectorAll('[data-move-post]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var parts = btn.getAttribute('data-move-post').split('|');
+          var idx = workingOrder.indexOf(parts[0]);
+          var swapWith = parts[1]==='up' ? idx-1 : idx+1;
+          if(swapWith<0 || swapWith>=workingOrder.length) return;
+          var tmp = workingOrder[idx]; workingOrder[idx] = workingOrder[swapWith]; workingOrder[swapWith] = tmp;
+          renderArrangeList();
+        });
+      });
+    }
+    renderArrangeList();
+
+    box.querySelector('#apSaveBtn').addEventListener('click', async function(){
+      var saveBtn = box.querySelector('#apSaveBtn');
+      saveBtn.disabled = true; saveBtn.textContent = t('saving');
+      var ok = await savePostOrder(pageId, secId, workingOrder.slice(), function(){ saveBtn.textContent = t('retrying'); });
+      saveBtn.disabled = false; saveBtn.textContent = t('renamePagesBtn');
+      if(ok){
+        state.posts[mapKey] = applyOrder(posts, workingOrder);
+        renderFeed(pageId, secId);
+        showToast(t('pageNamesSaved'));
+        cleanup();
+      } else {
+        showToast(saveErrorMessage(), true);
+      }
+    });
   }
 
   function escapeHtml(str){
