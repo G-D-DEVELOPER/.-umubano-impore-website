@@ -168,6 +168,12 @@
   }
   @media (max-width:520px){ .hero-banner{padding:12px 16px; max-width:80%;} }
 
+  .hero-logo-badge{
+    position:absolute; top:5%; right:4%; z-index:2;
+    width:clamp(64px, 12vw, 130px); height:auto; display:block;
+    border-radius:10px; box-shadow:0 4px 18px rgba(0,0,0,0.35);
+  }
+
   /* Organisation name on the left, page name on the right, written over the photo. */
   .page-hero-title{
     position:absolute; left:0; right:0; bottom:0; z-index:2;
@@ -743,6 +749,7 @@
       autoTranslate:'Translate from English', translateSuccess:'Translated.', translateFailed:'Automatic translation failed \u2014 you can type or paste the translation yourself in each tab.', nothingToTranslate:'Write something in English first.', formatHint:'Select text, then tap B or I',
       introLabel:'Intro text', northTitleLabel:'North heading', northTextLabel:'North text', southTitleLabel:'South heading', southTextLabel:'South text',
       founderTitleLabel:'Founder heading', founderNameLabel:'Founder name', founderTextLabel:'Founder text', changeHeroPhoto:'Background photo', changeFounderPhoto:'Founder photo', extraPhotos:'Extra photos',
+      introTitleLabel:'Introduction heading', introTextLabel:'Introduction text',
       addPageImage:'Add page photo', changePageImage:'Change page photo', captionPlaceholder:'Caption for this photo (optional)',
       videoTooLarge:'That video is too large (max 3MB). Try a shorter clip or lower quality.',
       editBtn:'Edit', saveChanges:'Save changes', saving:'Saving\u2026', cancelEdit:'Cancel edit',
@@ -818,6 +825,7 @@
       autoTranslate:"Traduire depuis l'anglais", translateSuccess:'Traduit.', translateFailed:"La traduction automatique a échoué \u2014 vous pouvez saisir ou coller la traduction vous-même dans chaque onglet.", nothingToTranslate:"Écrivez d'abord quelque chose en anglais.", formatHint:'Sélectionnez du texte, puis appuyez sur B ou I',
       introLabel:"Texte d'introduction", northTitleLabel:'Titre Nord', northTextLabel:'Texte Nord', southTitleLabel:'Titre Sud', southTextLabel:'Texte Sud',
       founderTitleLabel:'Titre fondatrice', founderNameLabel:'Nom de la fondatrice', founderTextLabel:'Texte fondatrice', changeHeroPhoto:'Photo de fond', changeFounderPhoto:'Photo de la fondatrice', extraPhotos:'Photos supplémentaires',
+      introTitleLabel:"Titre de l'introduction", introTextLabel:"Texte de l'introduction",
       addPageImage:'Ajouter une photo de page', changePageImage:'Changer la photo de page', captionPlaceholder:'Légende pour cette photo (facultatif)',
       videoTooLarge:'Cette vidéo est trop volumineuse (3 Mo max). Essayez un extrait plus court ou une qualité inférieure.',
       editBtn:'Modifier', saveChanges:'Enregistrer les modifications', saving:'Enregistrement\u2026', cancelEdit:'Annuler la modification',
@@ -893,6 +901,7 @@
       autoTranslate:'Hindura uvuye mu Cyongereza', translateSuccess:'Byahinduwe.', translateFailed:'Guhindura mu buryo bwikoresha byanze \u2014 ushobora kwandika cyangwa gushyiramo ubwawe ururimi muri buri kabuye.', nothingToTranslate:'Banza wandike ikintu mu Cyongereza.', formatHint:'Hitamo inyandiko, hanyuma ukande B cyangwa I',
       introLabel:"Umwandiko w'itangiriro", northTitleLabel:"Umutwe w'Amajyaruguru", northTextLabel:"Umwandiko w'Amajyaruguru", southTitleLabel:"Umutwe w'Amajyepfo", southTextLabel:"Umwandiko w'Amajyepfo",
       founderTitleLabel:"Umutwe w'Uwashinze", founderNameLabel:"Izina ry'uwashinze", founderTextLabel:"Umwandiko w'uwashinze", changeHeroPhoto:"Ifoto y'inyuma", changeFounderPhoto:"Ifoto y'uwashinze", extraPhotos:'Andi mafoto',
+      introTitleLabel:"Umutwe w'intangiriro", introTextLabel:"Umwandiko w'intangiriro",
       addPageImage:"Ongeraho ifoto y'urupapuro", changePageImage:"Hindura ifoto y'urupapuro", captionPlaceholder:"Ibisobanuro by'iyi foto (bitari ngombwa)",
       videoTooLarge:'Iyi video ni nini cyane (ntirengeze 3MB). Gerageza video ngufi cyangwa ireba make.',
       editBtn:'Hindura', saveChanges:'Bika impinduka', saving:'Kubika...', cancelEdit:'Hagarika guhindura',
@@ -973,7 +982,8 @@
     footerInfo:null, // address / phone / e-mail / social links shown in the footer
     pageLabelOverrides:{}, // key "page_<id>" or "section_<pageId>_<secId>" -> admin-chosen name
     navOrder:{ pages:[], sections:{} }, // pages: ordered id array; sections: pageId -> ordered id array
-    postOrder:{} // key "page:section" -> ordered post-id array (admin-arranged, front items shown first)
+    postOrder:{}, // key "page:section" -> ordered post-id array (admin-arranged, front items shown first)
+    pageIntros:{} // key "page:section" -> {title:{en,fr,rw}, text:{en,fr,rw}, images:[]} or null once loaded
   };
 
   var pageWrap = document.getElementById('pageWrap');
@@ -3097,7 +3107,10 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
   }
 
   function heroBannerHTML(){
-    return '<div class="hero-banner"><h1>'+escapeHtml(siteBrandName())+'</h1>'+
+    var logoEl = document.querySelector('.brand-logo');
+    var logoSrc = logoEl ? logoEl.getAttribute('src') : '';
+    return (logoSrc ? '<img class="hero-logo-badge" src="'+logoSrc+'" alt="'+escapeHtml(siteBrandName())+'">' : '')+
+      '<div class="hero-banner"><h1>'+escapeHtml(siteBrandName())+'</h1>'+
       '<div class="hero-divider"></div>'+
       '<button class="hero-cta-btn" id="heroCtaBtn">'+t('heroCtaBtn')+'</button>'+
       '</div>';
@@ -3493,6 +3506,215 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     }
   }
 
+  // ---------------- per-page introduction (title + text + photo gallery) ----------------
+  // Every page can have its own editable introduction, the same idea as the home page's
+  // founder story but simpler (no separate hero/founder photo fields — the page already
+  // has its own header photo). Stored as one key per page/section, same {en,fr,rw} shape
+  // used everywhere else so translation and rendering work identically.
+  function pageIntroKey(pageId, secId){ return 'page_intro_'+pageId+'_'+secId; }
+  var PAGE_INTRO_FIELDS = ['title','text'];
+
+  async function loadPageIntro(pageId, secId){
+    var mapKey = pageId+':'+secId;
+    try{
+      var res = await siteStorage.get(pageIntroKey(pageId, secId), true);
+      state.pageIntros[mapKey] = (res && res.value) ? JSON.parse(res.value) : null;
+    }catch(err){
+      state.pageIntros[mapKey] = null;
+    }
+  }
+
+  async function savePageIntro(pageId, secId, intro, onRetry){
+    try{
+      await withRetry(function(){ return siteStorage.set(pageIntroKey(pageId, secId), JSON.stringify(intro), true); }, onRetry);
+      return true;
+    }catch(err){
+      lastStorageError = err; console.error('Storage error', err);
+      return false;
+    }
+  }
+
+  function pageIntroHasContent(intro){
+    if(!intro) return false;
+    var hasText = PAGE_INTRO_FIELDS.some(function(f){ return intro[f] && (intro[f].en || intro[f].fr || intro[f].rw); });
+    return hasText || (intro.images && intro.images.length > 0);
+  }
+
+  function renderPageIntroView(pageId, secId){
+    var mapKey = pageId+':'+secId;
+    var card = document.getElementById('pageIntroCard');
+    if(!card) return;
+    var intro = state.pageIntros[mapKey];
+    var lang = state.lang;
+    function pick(field){ return (intro && intro[field] && (intro[field][lang] || intro[field].en)) || ''; }
+
+    var html = '';
+    if(state.isAdmin){
+      html += '<button class="story-edit-btn" id="pageIntroEditBtn">'+t('editStory')+'</button>';
+    }
+    if(pageIntroHasContent(intro)){
+      var title = pick('title');
+      var text = pick('text');
+      html += '<div id="pageIntroView">';
+      if(title) html += '<h2 class="founder-title">'+formatRichText(title)+'</h2>';
+      text.split(/\n\s*\n/).forEach(function(para){
+        para = para.trim();
+        if(para) html += '<p>'+formatRichText(para)+'</p>';
+      });
+      if(intro.images && intro.images.length){
+        html += '<div class="story-gallery view">';
+        intro.images.forEach(function(src){ html += '<img src="'+src+'">'; });
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    card.innerHTML = html;
+    var editBtn = document.getElementById('pageIntroEditBtn');
+    if(editBtn) editBtn.addEventListener('click', function(){ openPageIntroEditor(pageId, secId); });
+  }
+
+  function openPageIntroEditor(pageId, secId){
+    var mapKey = pageId+':'+secId;
+    var intro = state.pageIntros[mapKey] || { title:{en:'',fr:'',rw:''}, text:{en:'',fr:'',rw:''}, images:[] };
+    var introEditImages = (intro.images||[]).slice();
+
+    var introData = { en:{}, fr:{}, rw:{} };
+    PAGE_INTRO_FIELDS.forEach(function(f){
+      introData.en[f] = (intro[f] && intro[f].en) || '';
+      introData.fr[f] = (intro[f] && intro[f].fr) || '';
+      introData.rw[f] = (intro[f] && intro[f].rw) || '';
+    });
+    var introLang = 'en';
+
+    var card = document.getElementById('pageIntroCard');
+    var html = '<div class="story-edit-form">';
+    html += '<div class="edit-hint">'+t('editHint')+'</div>';
+    html += langTabsHTML('introLangTabs');
+
+    html += '<label class="field-label">'+t('introTitleLabel')+'</label>';
+    html += '<input type="text" id="field_introTitle" class="composer-title-input">';
+    html += '<label class="field-label">'+t('introTextLabel')+'</label>';
+    html += formatToolbarHTML('field_introText');
+    html += '<textarea id="field_introText" class="story-field"></textarea>';
+
+    html += '<button type="button" class="translate-btn" id="introTranslateBtn">'+t('autoTranslate')+'</button>';
+
+    html += '<label class="field-label">'+t('extraPhotos')+'</label>';
+    html += '<div class="story-gallery" id="introImgGrid"></div>';
+    html += '<label class="file-label">'+t('addPhoto')+'<input type="file" accept="image/*" id="introImgInput"></label>';
+
+    html += '<div class="composer-row" style="margin-top:14px;">'+
+            '<span></span>'+
+            '<div>'+
+            '<button class="btn-ghost" id="introCancelBtn" type="button">'+t('cancel')+'</button> '+
+            '<button class="post-btn" id="introSaveBtn" type="button">'+t('save')+'</button>'+
+            '</div></div>';
+    html += '</div>';
+    card.innerHTML = html;
+    wireFormatToolbar(card);
+
+    var fieldEls = { title: document.getElementById('field_introTitle'), text: document.getElementById('field_introText') };
+
+    function saveFieldsIntoLang(lang){
+      PAGE_INTRO_FIELDS.forEach(function(f){ introData[lang][f] = fieldEls[f].value; });
+    }
+    function loadLangIntoFields(lang){
+      PAGE_INTRO_FIELDS.forEach(function(f){ fieldEls[f].value = introData[lang][f]; });
+    }
+    loadLangIntoFields('en');
+
+    document.querySelectorAll('#introLangTabs .lang-pill').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        saveFieldsIntoLang(introLang);
+        introLang = btn.getAttribute('data-lang');
+        document.querySelectorAll('#introLangTabs .lang-pill').forEach(function(b){ b.classList.toggle('active', b===btn); });
+        loadLangIntoFields(introLang);
+      });
+    });
+
+    document.getElementById('introTranslateBtn').addEventListener('click', async function(){
+      saveFieldsIntoLang(introLang);
+      var hasEnglish = PAGE_INTRO_FIELDS.some(function(f){ return introData.en[f].trim(); });
+      if(!hasEnglish){ showToast(t('nothingToTranslate'), true); return; }
+      var btn = document.getElementById('introTranslateBtn');
+      var originalLabel = btn.textContent;
+      btn.disabled = true; btn.textContent = t('translating');
+      try{
+        var calls = [];
+        var callMeta = [];
+        PAGE_INTRO_FIELDS.forEach(function(f){
+          var val = introData.en[f].trim();
+          if(val){
+            calls.push(translateText(val,'fr')); callMeta.push({f:f, lang:'fr'});
+            calls.push(translateText(val,'rw')); callMeta.push({f:f, lang:'rw'});
+          }
+        });
+        var results = await Promise.all(calls);
+        var succeeded = false;
+        results.forEach(function(res, i){
+          var meta = callMeta[i];
+          if(res && res !== introData.en[meta.f]){
+            introData[meta.lang][meta.f] = res;
+            succeeded = true;
+          }
+        });
+        if(introLang!=='en') loadLangIntoFields(introLang);
+        showToast(succeeded ? t('translateSuccess') : t('translateFailed'), !succeeded);
+      }catch(err){
+        console.error('Auto-translate error', err);
+        showToast(t('translateFailed'), true);
+      }
+      btn.disabled = false; btn.textContent = originalLabel;
+    });
+
+    function redrawImgGrid(){
+      var grid = document.getElementById('introImgGrid');
+      grid.innerHTML = '';
+      introEditImages.forEach(function(src, idx){
+        var wrap = document.createElement('div');
+        wrap.className='img-preview';
+        wrap.innerHTML = '<img src="'+src+'"><button data-idx="'+idx+'">'+t('remove')+'</button>';
+        wrap.querySelector('button').addEventListener('click', function(){
+          introEditImages.splice(idx,1);
+          redrawImgGrid();
+        });
+        grid.appendChild(wrap);
+      });
+    }
+    redrawImgGrid();
+
+    document.getElementById('introImgInput').addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      resizeImage(file, function(dataUrl){
+        introEditImages.push(dataUrl);
+        redrawImgGrid();
+      });
+    });
+
+    document.getElementById('introCancelBtn').addEventListener('click', function(){
+      renderPageIntroView(pageId, secId);
+    });
+
+    document.getElementById('introSaveBtn').addEventListener('click', async function(){
+      saveFieldsIntoLang(introLang);
+      var btn = document.getElementById('introSaveBtn');
+      btn.disabled = true; btn.textContent = t('publishing');
+      var newIntro = { images: introEditImages };
+      PAGE_INTRO_FIELDS.forEach(function(f){
+        newIntro[f] = { en:introData.en[f].trim(), fr:introData.fr[f].trim(), rw:introData.rw[f].trim() };
+      });
+      var ok = await savePageIntro(pageId, secId, newIntro, function(){ btn.textContent = t('retrying'); });
+      if(ok){
+        state.pageIntros[mapKey] = newIntro;
+        renderPageIntroView(pageId, secId);
+      } else {
+        btn.disabled = false; btn.textContent = t('save');
+        showToast(saveErrorMessage(), true);
+      }
+    });
+  }
+
   function renderPageHeaderArea(pageId, secId){
     var mapKey = pageId+':'+secId;
     var heroContainer = document.getElementById('homeHero');
@@ -3566,6 +3788,8 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     html += '<h2 class="section-title">'+escapeHtml(sectionLabel)+'</h2>';
     if(section.desc) html += '<p class="section-desc">'+section.desc[state.lang]+'</p>';
 
+    html += '<div class="story-card" id="pageIntroCard"></div>';
+
     if(state.isAdmin){
       html += '<div class="composer" id="composer">'+
               langTabsHTML('composerLangTabs')+
@@ -3590,8 +3814,10 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
 
     var headerPromise = state.pageHeaders[mapKey]===undefined ? loadPageHeader(pageId, secId) : Promise.resolve();
     var titlePromise = state.pageTitles[mapKey]===undefined ? loadPageTitle(pageId, secId) : Promise.resolve();
-    await Promise.all([headerPromise, titlePromise]);
+    var introPromise = state.pageIntros[mapKey]===undefined ? loadPageIntro(pageId, secId) : Promise.resolve();
+    await Promise.all([headerPromise, titlePromise, introPromise]);
     renderPageHeaderArea(pageId, secId);
+    renderPageIntroView(pageId, secId);
 
     // Show whatever posts we already have (this session, or a cache saved
     // last time this browser visited this page) right away, then quietly
