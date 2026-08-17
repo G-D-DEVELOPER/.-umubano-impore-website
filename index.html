@@ -4134,13 +4134,11 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     var title = (post.title && (post.title[state.lang] || post.title.en)) || '';
     var body = (post.text && (post.text[state.lang] || post.text.en)) || '';
     var tag = (post.tag && (post.tag[state.lang] || post.tag.en)) || '';
-    var dateStr = new Date(post.ts).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
     var hasMultiMedia = post.media && post.media.length > 0;
 
     var html = '<button class="post-detail-back" id="postDetailBack">&larr; '+t('backBtn')+'</button>';
     if(tag) html += '<span class="post-tag-pill post-view-tag">'+formatRichText(tag)+'</span>';
     if(title) html += '<h1 class="post-detail-title">'+formatRichText(title)+'</h1>';
-    html += '<div class="post-view-date">'+dateStr+'</div>';
     if(hasMultiMedia){
       post.media.forEach(function(m){
         if(m.type==='video' && m.video){
@@ -4186,8 +4184,6 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     arr.forEach(function(post, i){
       var title = (post.title && (post.title[state.lang] || post.title.en)) || '';
       var tag = (post.tag && (post.tag[state.lang] || post.tag.en)) || '';
-      var date = new Date(post.ts);
-      var dateStr = date.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
       // Photo tile: first photo (or video) fills the whole card, title sits on top
       // of it, and clicking anywhere on the tile opens the full post.
       var firstMedia = (post.media && post.media.length) ? post.media[0] : null;
@@ -4207,7 +4203,6 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
       }
       html += '<div class="post-body">';
       if(title) html += '<h3 class="post-title">'+formatRichText(title)+'</h3>';
-      html += '<div class="post-date-row">'+dateStr+'</div>';
       html += '<div class="post-tile-readmore">'+t('heroCtaBtn')+' &rarr;</div>';
       html += '</div>';
       html += '</div>';
