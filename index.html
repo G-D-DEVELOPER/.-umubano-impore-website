@@ -448,16 +448,19 @@
   }
   .footer-link:hover{text-decoration:underline; opacity:1;}
   .footer-link.sub{font-size:13.5px; opacity:0.9; padding:2px 0;}
-  .footer-sitemap-col{grid-column:span 2;}
-  @media (max-width:900px){ .footer-sitemap-col{grid-column:span 2;} }
-  @media (max-width:560px){ .footer-sitemap-col{grid-column:span 1;} }
+  /* The sitemap always takes its own full-width row (rather than squeezing
+     into 2 of the footer's 5 columns), so every page name can sit on one
+     horizontal line with its subpages listed vertically beneath it. */
+  .footer-sitemap-col{grid-column:1 / -1;}
   .footer-sitemap{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
-    gap:20px 22px; margin-top:12px;
+    display:flex; flex-wrap:nowrap; gap:26px; margin-top:12px;
+    overflow-x:auto; padding-bottom:6px;
   }
+  .sitemap-group{flex:0 0 150px; min-width:150px;}
   .sitemap-heading{
     background:none; border:none; padding:0 0 6px; text-align:left;
     color:var(--white); font-family:var(--font-heading); font-weight:700; font-size:15px;
+    white-space:normal;
   }
   .sitemap-heading:hover{text-decoration:underline;}
   .sitemap-list{list-style:none; margin:0; padding:0;}
