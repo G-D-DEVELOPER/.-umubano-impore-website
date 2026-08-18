@@ -818,7 +818,7 @@
       pageNameRequired:'Type a page name first.',
       textSizeLabel:'Text size', textSizeSmall:'Small', textSizeMedium:'Medium', textSizeLarge:'Large', textSizeXL:'Extra large',
       logoSizeLabel:'Logo size (top bar)',
-      footerAddress:'Address', footerContact:'Contact Us',
+      footerSiteMap:'Site Map', footerAddress:'Address', footerContact:'Contact Us',
       footerPhone:'Phone:', footerEmail:'E-mail:',
       footerEditBtn:'Edit footer details', footerEditTitle:'Footer details',
       siteNameLabel:'Site name (shown at the top, in the hero, and in the footer)', siteTaglineLabel:'Tagline (shown under the site name in the footer)',
@@ -891,7 +891,7 @@
       pageNameRequired:"Entrez d'abord un nom de page.",
       textSizeLabel:'Taille du texte', textSizeSmall:'Petite', textSizeMedium:'Moyenne', textSizeLarge:'Grande', textSizeXL:'Très grande',
       logoSizeLabel:'Taille du logo (barre du haut)',
-      footerAddress:'Adresse', footerContact:'Nous contacter',
+      footerSiteMap:'Plan du site', footerAddress:'Adresse', footerContact:'Nous contacter',
       footerPhone:'Téléphone :', footerEmail:'E-mail :',
       footerEditBtn:'Modifier les coordonnées', footerEditTitle:'Coordonnées du pied de page',
       siteNameLabel:'Nom du site (affiché en haut, sur la photo principale et dans le pied de page)', siteTaglineLabel:'Slogan (affiché sous le nom du site dans le pied de page)',
@@ -965,7 +965,7 @@
       pageNameRequired:'Banza wandike izina ry\'ipaji.',
       textSizeLabel:'Ingano y\'inyandiko', textSizeSmall:'Nto', textSizeMedium:'Yo hagati', textSizeLarge:'Nini', textSizeXL:'Nini cyane',
       logoSizeLabel:'Ingano y\'ikirango (hejuru)',
-      footerAddress:'Aderesi', footerContact:'Twandikire',
+      footerSiteMap:"Urutonde rw'urubuga", footerAddress:'Aderesi', footerContact:'Twandikire',
       footerPhone:'Telefone:', footerEmail:'Imeyili:',
       footerEditBtn:"Hindura amakuru yo hasi", footerEditTitle:"Amakuru yo hasi ku rupapuro",
       siteNameLabel:"Izina ry'urubuga (rigaragara hejuru, ku ifoto nyamukuru, no hasi ku rupapuro)", siteTaglineLabel:"Interuro ngenga (igaragara munsi y'izina ry'urubuga hasi ku rupapuro)",
@@ -2422,6 +2422,23 @@
               '<div class="footer-brand-tagline">'+escapeHtml(siteTagline())+'</div>'+
               '<button class="footer-cta-btn" id="footerWriteBtn">'+escapeHtml(t('writeToUsBtn'))+'</button>'+
             '</div>';
+
+    // Site map: one column per section of the site, each with its pages listed
+    // beneath it, rather than one long single-file list.
+    html += '<div class="footer-col footer-sitemap-col"><h4>'+escapeHtml(t('footerSiteMap'))+'</h4>'+
+            '<button class="footer-link" data-nav="home:home">'+escapeHtml(t('home'))+'</button>'+
+            '<div class="footer-sitemap">';
+    orderedPages().filter(function(p){ return !p.hidden && p.id!=='settings'; }).forEach(function(p){
+      var pSections = orderedSections(p);
+      html += '<div class="sitemap-group">'+
+                '<button class="sitemap-heading" data-nav="'+p.id+':'+pSections[0].id+'">'+escapeHtml(pageDisplayLabel(p))+'</button>'+
+                '<ul class="sitemap-list">';
+      pSections.forEach(function(s){
+        html += '<li><button class="footer-link sub" data-nav="'+p.id+':'+s.id+'">'+escapeHtml(sectionDisplayLabel(p, s))+'</button></li>';
+      });
+      html += '</ul></div>';
+    });
+    html += '</div></div>';
 
     html += '<div class="footer-col"><h4>'+escapeHtml(t('footerAddress'))+'</h4>';
     if(info.address) html += '<p class="footer-text">'+escapeHtml(info.address).replace(/\n/g,'<br>')+'</p>';
