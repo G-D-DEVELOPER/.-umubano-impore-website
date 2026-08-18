@@ -818,13 +818,11 @@
       pageNameRequired:'Type a page name first.',
       textSizeLabel:'Text size', textSizeSmall:'Small', textSizeMedium:'Medium', textSizeLarge:'Large', textSizeXL:'Extra large',
       logoSizeLabel:'Logo size (top bar)',
-      footerSiteMap:'Site Map', footerAddress:'Address', footerContact:'Contact Us', footerFollow:'Follow Us',
+      footerAddress:'Address', footerContact:'Contact Us',
       footerPhone:'Phone:', footerEmail:'E-mail:',
       footerEditBtn:'Edit footer details', footerEditTitle:'Footer details',
       siteNameLabel:'Site name (shown at the top, in the hero, and in the footer)', siteTaglineLabel:'Tagline (shown under the site name in the footer)',
       footerAddressLabel:'Address', footerPhoneLabel:'Phone number', footerEmailLabel:'E-mail address',
-      footerFacebookLabel:'Facebook link', footerInstagramLabel:'Instagram link',
-      footerYoutubeLabel:'YouTube link', footerLinkedinLabel:'LinkedIn link',
       footerSaved:'Footer details saved.' },
     fr:{ menu:'Menu', home:'Accueil', language:'Langue', admin:'Admin', adminMode:'Mode admin', signOut:'Se déconnecter',
       modalTitle:'Connexion admin', modalDesc:"Connectez-vous avec votre e-mail et mot de passe admin pour publier des mises à jour et gérer le contenu.",
@@ -893,13 +891,11 @@
       pageNameRequired:"Entrez d'abord un nom de page.",
       textSizeLabel:'Taille du texte', textSizeSmall:'Petite', textSizeMedium:'Moyenne', textSizeLarge:'Grande', textSizeXL:'Très grande',
       logoSizeLabel:'Taille du logo (barre du haut)',
-      footerSiteMap:'Plan du site', footerAddress:'Adresse', footerContact:'Nous contacter', footerFollow:'Suivez-nous',
+      footerAddress:'Adresse', footerContact:'Nous contacter',
       footerPhone:'Téléphone :', footerEmail:'E-mail :',
       footerEditBtn:'Modifier les coordonnées', footerEditTitle:'Coordonnées du pied de page',
       siteNameLabel:'Nom du site (affiché en haut, sur la photo principale et dans le pied de page)', siteTaglineLabel:'Slogan (affiché sous le nom du site dans le pied de page)',
       footerAddressLabel:'Adresse', footerPhoneLabel:'Numéro de téléphone', footerEmailLabel:'Adresse e-mail',
-      footerFacebookLabel:'Lien Facebook', footerInstagramLabel:'Lien Instagram',
-      footerYoutubeLabel:'Lien YouTube', footerLinkedinLabel:'Lien LinkedIn',
       footerSaved:'Coordonnées enregistrées.',
       footer:'Ce site est en lecture seule pour les visiteurs \u2014 seuls les administrateurs de l\'organisation peuvent publier des mises à jour.' },
     rw:{ menu:'Urutonde', home:'Ahabanza', language:'Ururimi', admin:'Admin', adminMode:'Uburyo bwa Admin', signOut:'Gusohoka',
@@ -969,13 +965,11 @@
       pageNameRequired:'Banza wandike izina ry\'ipaji.',
       textSizeLabel:'Ingano y\'inyandiko', textSizeSmall:'Nto', textSizeMedium:'Yo hagati', textSizeLarge:'Nini', textSizeXL:'Nini cyane',
       logoSizeLabel:'Ingano y\'ikirango (hejuru)',
-      footerSiteMap:"Urutonde rw'urubuga", footerAddress:'Aderesi', footerContact:'Twandikire', footerFollow:'Dukurikire',
+      footerAddress:'Aderesi', footerContact:'Twandikire',
       footerPhone:'Telefone:', footerEmail:'Imeyili:',
       footerEditBtn:"Hindura amakuru yo hasi", footerEditTitle:"Amakuru yo hasi ku rupapuro",
       siteNameLabel:"Izina ry'urubuga (rigaragara hejuru, ku ifoto nyamukuru, no hasi ku rupapuro)", siteTaglineLabel:"Interuro ngenga (igaragara munsi y'izina ry'urubuga hasi ku rupapuro)",
       footerAddressLabel:'Aderesi', footerPhoneLabel:'Nimero ya telefone', footerEmailLabel:'Aderesi ya imeyili',
-      footerFacebookLabel:'Umurongo wa Facebook', footerInstagramLabel:'Umurongo wa Instagram',
-      footerYoutubeLabel:'Umurongo wa YouTube', footerLinkedinLabel:'Umurongo wa LinkedIn',
       footerSaved:'Amakuru yo hasi yabitswe.',
       footer:'Uru rubuga rurabona gusa ku bashyitsi \u2014 abakozi ba admin b\'umuryango ni bo bonyine bashobora kohereza amakuru mashya.' }
   };
@@ -2375,13 +2369,10 @@
   }
 
   // ---------------- site footer ----------------
-  // The Site Map column is built from the same PAGES list the menu uses, so adding a
-  // page anywhere automatically shows up here too, already translated.
   var DEFAULT_FOOTER_INFO = {
     siteName:'', tagline:'',
     address:'Huye District, Southern Province, Rwanda',
-    phone:'', email:'',
-    facebook:'', instagram:'', youtube:'', linkedin:''
+    phone:'', email:''
   };
   // siteName/tagline are blank by default, meaning "use the built-in text" —
   // an empty string here always falls back to the original wording, so a page
@@ -2392,13 +2383,6 @@
     var el = document.getElementById('brandNameEl');
     if(el) el.textContent = siteBrandName();
   }
-
-  var SOCIAL_ICONS = {
-    facebook:'<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H8v3h2v7h3v-7h3l1-3h-4v-2c0-.6.4-1 1-1z"/></svg>',
-    instagram:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.6"/><circle cx="17.2" cy="6.8" r="1.2" fill="currentColor" stroke="none"/></svg>',
-    youtube:'<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12s0-3.2-.4-4.7a2.5 2.5 0 0 0-1.8-1.8C18.3 5 12 5 12 5s-6.3 0-7.8.5A2.5 2.5 0 0 0 2.4 7.3C2 8.8 2 12 2 12s0 3.2.4 4.7a2.5 2.5 0 0 0 1.8 1.8C5.7 19 12 19 12 19s6.3 0 7.8-.5a2.5 2.5 0 0 0 1.8-1.8C22 15.2 22 12 22 12zM10 15V9l5.2 3L10 15z"/></svg>',
-    linkedin:'<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M6.9 8.4H3.6V21h3.3V8.4zM5.2 3a1.9 1.9 0 1 0 0 3.9 1.9 1.9 0 0 0 0-3.9zM21 13.9c0-3.4-1.8-5-4.2-5-1.9 0-2.8 1.1-3.3 1.8V8.4H10.2c0 .9 0 12.6 0 12.6h3.3v-7c0-.4 0-.7.1-1 .3-.7.9-1.4 2-1.4 1.4 0 2 1.1 2 2.7V21H21v-7.1z"/></svg>'
-  };
 
   async function loadFooterInfo(){
     try{
@@ -2439,23 +2423,6 @@
               '<button class="footer-cta-btn" id="footerWriteBtn">'+escapeHtml(t('writeToUsBtn'))+'</button>'+
             '</div>';
 
-    // Site map: one column per section of the site, each with its pages listed
-    // beneath it, rather than one long single-file list.
-    html += '<div class="footer-col footer-sitemap-col"><h4>'+escapeHtml(t('footerSiteMap'))+'</h4>'+
-            '<button class="footer-link" data-nav="home:home">'+escapeHtml(t('home'))+'</button>'+
-            '<div class="footer-sitemap">';
-    orderedPages().filter(function(p){ return !p.hidden && p.id!=='settings'; }).forEach(function(p){
-      var pSections = orderedSections(p);
-      html += '<div class="sitemap-group">'+
-                '<button class="sitemap-heading" data-nav="'+p.id+':'+pSections[0].id+'">'+escapeHtml(pageDisplayLabel(p))+'</button>'+
-                '<ul class="sitemap-list">';
-      pSections.forEach(function(s){
-        html += '<li><button class="footer-link sub" data-nav="'+p.id+':'+s.id+'">'+escapeHtml(sectionDisplayLabel(p, s))+'</button></li>';
-      });
-      html += '</ul></div>';
-    });
-    html += '</div></div>';
-
     html += '<div class="footer-col"><h4>'+escapeHtml(t('footerAddress'))+'</h4>';
     if(info.address) html += '<p class="footer-text">'+escapeHtml(info.address).replace(/\n/g,'<br>')+'</p>';
     if(info.phone || info.email){
@@ -2463,19 +2430,6 @@
       if(info.phone) html += '<p class="footer-text">'+escapeHtml(t('footerPhone'))+' <strong>'+escapeHtml(info.phone)+'</strong></p>';
       if(info.email) html += '<p class="footer-text">'+escapeHtml(t('footerEmail'))+' <strong>'+escapeHtml(info.email)+'</strong></p>';
     }
-    html += '</div>';
-
-    html += '<div class="footer-col"><h4>'+escapeHtml(t('footerFollow'))+'</h4><div class="footer-social">';
-    var anySocial = false;
-    ['facebook','instagram','youtube','linkedin'].forEach(function(net){
-      var link = info[net];
-      if(!link) return;
-      anySocial = true;
-      var safe = /^https?:\/\//i.test(link) ? link : 'https://'+link;
-      html += '<a href="'+escapeHtml(safe)+'" target="_blank" rel="noopener noreferrer" aria-label="'+net+'">'+SOCIAL_ICONS[net]+'</a>';
-    });
-    html += '</div>';
-    if(!anySocial && state.isAdmin) html += '<p class="footer-text" style="opacity:0.75;">—</p>';
     html += '</div>';
 
     html += '</div>'; // /footer-inner
@@ -2518,10 +2472,6 @@
       field('fiAddress', t('footerAddressLabel'), info.address, true)+
       field('fiPhone', t('footerPhoneLabel'), info.phone)+
       field('fiEmail', t('footerEmailLabel'), info.email)+
-      field('fiFacebook', t('footerFacebookLabel'), info.facebook)+
-      field('fiInstagram', t('footerInstagramLabel'), info.instagram)+
-      field('fiYoutube', t('footerYoutubeLabel'), info.youtube)+
-      field('fiLinkedin', t('footerLinkedinLabel'), info.linkedin)+
       '<div class="modal-actions">'+
         '<button class="btn-ghost" id="fiCancel">'+escapeHtml(t('cancel'))+'</button>'+
         '<button class="btn-solid" id="fiSave">'+escapeHtml(t('save'))+'</button>'+
@@ -2540,11 +2490,7 @@
         tagline: box.querySelector('#fiTagline').value.trim(),
         address: box.querySelector('#fiAddress').value.trim(),
         phone: box.querySelector('#fiPhone').value.trim(),
-        email: box.querySelector('#fiEmail').value.trim(),
-        facebook: box.querySelector('#fiFacebook').value.trim(),
-        instagram: box.querySelector('#fiInstagram').value.trim(),
-        youtube: box.querySelector('#fiYoutube').value.trim(),
-        linkedin: box.querySelector('#fiLinkedin').value.trim()
+        email: box.querySelector('#fiEmail').value.trim()
       };
       var ok = await saveFooterInfo(next, function(){ saveBtn.textContent = t('retrying'); });
       if(ok){
