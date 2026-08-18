@@ -505,6 +505,21 @@
     box-shadow:var(--shadow); max-height:88vh; overflow-y:auto;
   }
   .modal.modal-wide{max-width:640px;}
+  /* Full-size photo viewer — tapping any small gallery thumbnail (introduction
+     photos, founder story photos) opens the same image here at full size. */
+  .lightbox-bg{
+    position:fixed; inset:0; background:rgba(10,20,16,0.88); z-index:70;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+    opacity:0; pointer-events:none; transition:opacity .2s ease; cursor:zoom-out;
+  }
+  .lightbox-bg.open{opacity:1; pointer-events:auto;}
+  .lightbox-bg img{max-width:100%; max-height:100%; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.5); cursor:default;}
+  .lightbox-close{
+    position:fixed; top:18px; right:22px; background:rgba(255,255,255,0.15); border:none; color:var(--white);
+    font-size:22px; line-height:1; width:40px; height:40px; border-radius:50%; cursor:pointer; z-index:71;
+  }
+  .lightbox-close:hover{background:rgba(255,255,255,0.28);}
+  #storyView .story-gallery img, #pageIntroView .story-gallery img{cursor:zoom-in;}
   /* Full post reading view — plain page content (no popup, no dark overlay, no
      green tint) so a very long post never distorts the card grid it came from. */
   .post-detail-back{
@@ -1298,6 +1313,29 @@
       box.querySelector('#cfYes').addEventListener('click', function(){ cleanup(true); });
       bg.addEventListener('click', function(e){ if(e.target===bg) cleanup(false); });
     });
+  }
+
+  function openImageLightbox(src){
+    var bg = document.createElement('div');
+    bg.className = 'lightbox-bg open';
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'lightbox-close';
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.textContent = '×';
+    var img = document.createElement('img');
+    img.src = src;
+    bg.appendChild(img);
+    document.body.appendChild(closeBtn);
+    document.body.appendChild(bg);
+    function cleanup(){
+      if(bg.parentNode) document.body.removeChild(bg);
+      if(closeBtn.parentNode) document.body.removeChild(closeBtn);
+      document.removeEventListener('keydown', onKey);
+    }
+    function onKey(e){ if(e.key==='Escape') cleanup(); }
+    bg.addEventListener('click', cleanup);
+    closeBtn.addEventListener('click', cleanup);
+    document.addEventListener('keydown', onKey);
   }
 
   function showToast(message, isError){
@@ -3220,6 +3258,9 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     }
 
     target.innerHTML = html;
+    target.querySelectorAll('.story-gallery img').forEach(function(img){
+      img.addEventListener('click', function(){ openImageLightbox(img.src); });
+    });
   }
 
   var storyEditImages = [];
@@ -3569,6 +3610,9 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
       html += '</div>';
     }
     card.innerHTML = html;
+    card.querySelectorAll('#pageIntroView .story-gallery img').forEach(function(img){
+      img.addEventListener('click', function(){ openImageLightbox(img.src); });
+    });
     var editBtn = document.getElementById('pageIntroEditBtn');
     if(editBtn) editBtn.addEventListener('click', function(){ openPageIntroEditor(pageId, secId); });
   }
@@ -3782,11 +3826,12 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     var mapKey = pageId+':'+secId;
     var sectionLabel = sectionDisplayLabel(page, section);
 
+    // No separate crumb/heading/description block here any more — the page's
+    // name is already shown on its header photo banner, and the page's own
+    // "introduction" (below) carries the heading and description now. Showing
+    // both used to mean the page name/title effectively appeared twice.
     var html = '';
     html += '<div id="pageHeaderControls"></div>';
-    html += '<div class="crumb">'+escapeHtml(pageDisplayLabel(page))+'</div>';
-    html += '<h2 class="section-title">'+escapeHtml(sectionLabel)+'</h2>';
-    if(section.desc) html += '<p class="section-desc">'+section.desc[state.lang]+'</p>';
 
     html += '<div class="story-card" id="pageIntroCard"></div>';
 
