@@ -228,6 +228,10 @@
   }
   .story-gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin-top:14px;}
   .story-gallery img{width:100%; border-radius:10px; display:block; aspect-ratio:1.2; object-fit:cover;}
+  /* Sitemap page: its photo (a map) needs to be readable, not a small thumbnail
+     like other pages' gallery photos. */
+  #pageIntroView.big-gallery .story-gallery{grid-template-columns:repeat(auto-fill,minmax(320px,1fr));}
+  #pageIntroView.big-gallery .story-gallery img{aspect-ratio:auto;}
   .story-edit-form textarea.story-field{
     width:100%; min-height:100px; border:1px solid var(--green-line); border-radius:10px;
     padding:12px; font-family:inherit; font-size:14.5px; color:var(--ink); resize:vertical; margin-bottom:14px;
@@ -722,7 +726,8 @@
         {id:'mission', label:{en:'Mission',fr:'Mission',rw:'Intego'}, desc:{en:'Why Umubano Impore exists and the change we work toward.',fr:"Pourquoi Umubano Impore existe et le changement que nous visons.",rw:"Impamvu Umubano Impore ibaho n'impinduka dushaka gukora."}},
         {id:'structure', label:{en:'Structure',fr:'Structure',rw:'Imiterere'}, desc:{en:'How the organisation is organised and run.',fr:"Comment l'organisation est structurée et gérée.",rw:"Uko umuryango ugenzurwa kandi uyoborwa."}},
         {id:'board', label:{en:'Board members',fr:"Membres du conseil d'administration",rw:"Abagize Inama y'Ubuyobozi"}, desc:{en:'The people who guide Umubano Impore.',fr:'Les personnes qui guident Umubano Impore.',rw:'Abantu bayobora Umubano Impore.'}},
-        {id:'documents', label:{en:'Documents',fr:'Documents',rw:'Inyandiko'}, desc:{en:'Statutes, reports and other official documents.',fr:'Statuts, rapports et autres documents officiels.',rw:"Amategeko shingiro, raporo n'izindi nyandiko z'umwuga."}}
+        {id:'documents', label:{en:'Documents',fr:'Documents',rw:'Inyandiko'}, desc:{en:'Statutes, reports and other official documents.',fr:'Statuts, rapports et autres documents officiels.',rw:"Amategeko shingiro, raporo n'izindi nyandiko z'umwuga."}},
+        {id:'sitemap', label:{en:'Sitemap',fr:'Plan du site',rw:"Urutonde rw'urubuga"}, desc:{en:'A map of our project sites.',fr:'Une carte de nos sites de projets.',rw:"Ikarita y'ahantu imishinga yacu ikorerwa."}}
       ]},
     { id:'projects', label:{en:'Projects',fr:'Projets',rw:'Imishinga'}, sections:[
         {id:'marraine', label:{en:"Marraine's Home",fr:'La Maison de la Marraine',rw:'Inzu ya Marraine'}, desc:{en:"Updates from the Marraine's Home project.",fr:'Actualités du projet La Maison de la Marraine.',rw:"Amakuru y'umushinga w'Inzu ya Marraine."}},
@@ -742,7 +747,8 @@
         {id:'office', label:{en:'Registered Office',fr:'Siège social',rw:'Aho Ibiro Byacu Biherereye'}, desc:{en:'Our registered office details.',fr:'Les coordonnées de notre siège social.',rw:'Amakuru y\'aho ibiro byacu biherereye.'}}
       ]},
     { id:'sponsors', label:{en:'Sponsors',fr:'Sponsors',rw:'Abaterankunga'}, sections:[
-        {id:'thanks', label:{en:'Thank you very much!',fr:'Merci beaucoup !',rw:'Murakoze cyane!'}, desc:{en:'Gratitude to our sponsors and partners.',fr:'Nos remerciements à nos sponsors et partenaires.',rw:'Ubushimwe ku baterankunga n\'abafatanyabikorwa bacu.'}}
+        {id:'thanks', label:{en:'Thank you very much!',fr:'Merci beaucoup !',rw:'Murakoze cyane!'}, desc:{en:'Gratitude to our sponsors and partners.',fr:'Nos remerciements à nos sponsors et partenaires.',rw:'Ubushimwe ku baterankunga n\'abafatanyabikorwa bacu.'}},
+        {id:'follow', label:{en:'Follow Us',fr:'Suivez-nous',rw:'Dukurikire'}, desc:{en:'Keep up with our news and updates.',fr:'Suivez nos actualités.',rw:"Kurikirana amakuru yacu."}}
       ]},
     { id:'settings', label:{en:'Settings',fr:'Paramètres',rw:'Igenamiterere'}, sections:[
         {id:'about', label:{en:'About',fr:'À propos',rw:'Ibiraba'}, desc:{en:'About Umubano Impore and this website.',fr:'À propos d\'Umubano Impore et de ce site.',rw:'Ibirebana na Umubano Impore n\'uru rubuga.'}},
@@ -3564,7 +3570,8 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     if(pageIntroHasContent(intro)){
       var title = pick('title');
       var text = pick('text');
-      html += '<div id="pageIntroView">';
+      var bigGallery = (pageId==='organisation' && secId==='sitemap');
+      html += '<div id="pageIntroView"'+(bigGallery ? ' class="big-gallery"' : '')+'>';
       if(title) html += '<h2 class="founder-title">'+formatRichText(title)+'</h2>';
       text.split(/\n\s*\n/).forEach(function(para){
         para = para.trim();
