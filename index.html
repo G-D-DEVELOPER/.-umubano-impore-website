@@ -230,7 +230,7 @@
   .story-gallery img{width:100%; border-radius:10px; display:block; aspect-ratio:1.2; object-fit:cover;}
   /* Sitemap page: its photo (a map) needs to be readable, not a small thumbnail
      like other pages' gallery photos. */
-  #pageIntroView.big-gallery .story-gallery{grid-template-columns:repeat(auto-fill,minmax(320px,1fr));}
+  #pageIntroView.big-gallery .story-gallery{grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));}
   #pageIntroView.big-gallery .story-gallery img{aspect-ratio:auto;}
   .story-edit-form textarea.story-field{
     width:100%; min-height:100px; border:1px solid var(--green-line); border-radius:10px;
@@ -326,8 +326,15 @@
   .feed-grid::-webkit-scrollbar{height:7px;}
   .feed-grid::-webkit-scrollbar-thumb{background:var(--green-line); border-radius:4px;}
   /* The posts grid breaks out wider than the text column so several tiles fit
-     across the row, the way a photo wall should read. */
-  .feed{width:min(1200px, calc(100vw - 32px)); margin-left:50%; transform:translateX(-50%);}
+     across the row, the way a photo wall should read. Sized off --vw (set by
+     JS from document.documentElement.clientWidth) rather than the 100vw unit:
+     100vw includes the vertical scrollbar's width in most desktop browsers,
+     while clientWidth does not, so 100vw is a few pixels WIDER than what's
+     actually visible whenever a scrollbar is present — enough to push this
+     centered element past both edges of the real viewport and force a
+     horizontal scrollbar of its own. --vw always matches the true visible
+     width, scrollbar included or not. */
+  .feed{width:min(1200px, calc(var(--vw, 100vw) - 32px)); margin-left:50%; transform:translateX(-50%);}
   .feed-grid.layout-grid{flex-wrap:wrap; justify-content:center; overflow-x:visible; scroll-snap-type:none; gap:14px;}
   .feed-grid.layout-grid .post-card{flex:0 1 180px;}
   .feed-grid.layout-list{flex-direction:column; overflow-x:visible; scroll-snap-type:none;}
@@ -1010,6 +1017,25 @@
   var sidebarNav = document.getElementById('sidebarNav');
   var sidebar = document.getElementById('sidebar');
   var overlay = document.getElementById('overlay');
+
+  // Scrollbar-safe stand-in for the 100vw CSS unit. 100vw includes the
+  // vertical scrollbar's width in most desktop browsers, while
+  // document.documentElement.clientWidth does not — so anything sized off
+  // 100vw ends up a few pixels wider than what's actually visible whenever a
+  // scrollbar is showing, which is enough to push a centered full-bleed
+  // element past both edges of the real viewport. Kept in sync with a
+  // ResizeObserver (rather than just a window "resize" listener) so it also
+  // updates when a scrollbar appears/disappears purely from page content
+  // growing or shrinking, not just from the window itself being resized.
+  function updateViewportWidthVar(){
+    document.documentElement.style.setProperty('--vw', document.documentElement.clientWidth + 'px');
+  }
+  updateViewportWidthVar();
+  if(window.ResizeObserver){
+    new ResizeObserver(updateViewportWidthVar).observe(document.documentElement);
+  } else {
+    window.addEventListener('resize', updateViewportWidthVar);
+  }
 
   // Admin-added pages, on top of the built-in ones above. Kept separate from PAGES
   // so the site's core structure can never be deleted — only pages admin created
