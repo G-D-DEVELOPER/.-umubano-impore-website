@@ -1483,6 +1483,61 @@
     return { en:text, fr:results[0], rw:results[1] };
   }
 
+  // ---------------- live fallback translation for content missing a language ----------------
+  // Admin-authored content ({en,fr,rw} fields on posts, page introductions, and the
+  // home story) is normally translated once at write time — but if a post was ever
+  // saved with only English filled in (composer used before this existed, or the
+  // "Translate" button skipped because it was offline), this fills the gap for a
+  // visitor on the fly, using the same free translate.googleapis.com service the
+  // composer's "Translate from English" button already calls. English shows first
+  // (so the page never blocks on a network round trip), then onReady fires once the
+  // real translation lands so the caller can re-render with it. Translated text is
+  // cached in localStorage (keyed by a hash of the English source, not the post id,
+  // so identical seed/boilerplate text shared across pages only gets translated
+  // once) so a returning visitor never waits on the same text twice.
+  function hashText(text){
+    var h = 0;
+    for(var i=0; i<text.length; i++){ h = ((h<<5)-h + text.charCodeAt(i))|0; }
+    return h;
+  }
+  function localeCacheKey(text, lang){ return 'xlate_v1_'+lang+'_'+hashText(text); }
+  function readCachedTranslation(text, lang){
+    try{ return localStorage.getItem(localeCacheKey(text, lang)); }catch(e){ return null; }
+  }
+  function writeCachedTranslation(text, lang, translated){
+    try{ localStorage.setItem(localeCacheKey(text, lang), translated); }
+    catch(e){ /* storage full/unavailable — fine to skip, it's only a speed cache */ }
+  }
+
+  function ensureFieldTranslated(fieldObj, lang, onReady){
+    if(!fieldObj || lang==='en') return;
+    if(fieldObj[lang] || !fieldObj.en) return; // already there, or nothing to translate
+    if(!fieldObj.__pending) fieldObj.__pending = {};
+    if(fieldObj.__pending[lang]) return; // already fetching
+    var cached = readCachedTranslation(fieldObj.en, lang);
+    if(cached){ fieldObj[lang] = cached; if(onReady) onReady(); return; }
+    fieldObj.__pending[lang] = true;
+    translateText(fieldObj.en, lang).then(function(result){
+      delete fieldObj.__pending[lang];
+      if(result){
+        fieldObj[lang] = result;
+        writeCachedTranslation(fieldObj.en, lang, result);
+        if(onReady) onReady();
+      }
+    }).catch(function(){ delete fieldObj.__pending[lang]; });
+  }
+
+  // Reads a {en,fr,rw} field in the current language. Replaces the old inline
+  // `field && (field[lang] || field.en)` pattern used throughout rendering —
+  // same immediate English fallback, but now also kicks off ensureFieldTranslated
+  // above instead of silently showing English forever.
+  function localizedText(fieldObj, lang, onReady){
+    if(!fieldObj) return '';
+    if(fieldObj[lang]) return fieldObj[lang];
+    ensureFieldTranslated(fieldObj, lang, onReady);
+    return fieldObj.en || '';
+  }
+
   // Small rich-text formatter: **bold**, *italic*, __underline__, ~~strikethrough~~ markers, applied after HTML-escaping.
   function formatRichText(text){
     var escaped = escapeHtml(text);
@@ -3226,7 +3281,7 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     if(!target) return;
     var s = state.homeStory;
     var lang = state.lang;
-    function pick(field){ return (s[field] && (s[field][lang] || s[field].en)) || ''; }
+    function pick(field){ return localizedText(s[field], lang, function(){ if(state.currentPage==='home') renderStoryView(); }); }
     function sentenceParas(text){
       var out = '';
       text.split(/\n\s*\n/).forEach(function(para){
@@ -3587,7 +3642,12 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     if(!card) return;
     var intro = state.pageIntros[mapKey];
     var lang = state.lang;
-    function pick(field){ return (intro && intro[field] && (intro[field][lang] || intro[field].en)) || ''; }
+    function pick(field){
+      if(!intro || !intro[field]) return '';
+      return localizedText(intro[field], lang, function(){
+        if(state.currentPage===pageId && state.currentSection===secId) renderPageIntroView(pageId, secId);
+      });
+    }
 
     var html = '';
     if(state.isAdmin){
@@ -4177,9 +4237,10 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     var heroContainer = document.getElementById('homeHero');
     if(heroContainer) heroContainer.innerHTML = '';
 
-    var title = (post.title && (post.title[state.lang] || post.title.en)) || '';
-    var body = (post.text && (post.text[state.lang] || post.text.en)) || '';
-    var tag = (post.tag && (post.tag[state.lang] || post.tag.en)) || '';
+    var rerenderThisDetail = function(){ if(state.viewingPost && state.viewingPost.id===post.id) renderPostDetail(post); };
+    var title = localizedText(post.title, state.lang, rerenderThisDetail);
+    var body = localizedText(post.text, state.lang, rerenderThisDetail);
+    var tag = localizedText(post.tag, state.lang, rerenderThisDetail);
     var hasMultiMedia = post.media && post.media.length > 0;
 
     var html = '<button class="post-detail-back" id="postDetailBack">&larr; '+t('backBtn')+'</button>';
@@ -4192,7 +4253,7 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
         } else if(m.image){
           html += '<img class="post-view-img" src="'+m.image+'">';
         }
-        var cap = (m.caption && (m.caption[state.lang] || m.caption.en)) || '';
+        var cap = localizedText(m.caption, state.lang, rerenderThisDetail);
         if(cap) html += '<p class="post-view-text" style="margin-bottom:14px;">'+formatRichText(cap)+'</p>';
       });
       if(body) html += '<p class="post-view-text">'+formatRichText(body)+'</p>';
@@ -4227,9 +4288,10 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
     html += '<div class="feed-carousel-wrap">';
     if(showCarouselNav) html += '<button class="feed-nav feed-nav-prev" id="feedPrev" aria-label="Previous">&#8249;</button>';
     html += '<div class="feed-grid layout-'+layout+'" id="feedTrack">';
+    var rerenderThisFeed = function(){ if(state.currentPage===pageId && state.currentSection===secId) renderFeed(pageId, secId); };
     arr.forEach(function(post, i){
-      var title = (post.title && (post.title[state.lang] || post.title.en)) || '';
-      var tag = (post.tag && (post.tag[state.lang] || post.tag.en)) || '';
+      var title = localizedText(post.title, state.lang, rerenderThisFeed);
+      var tag = localizedText(post.tag, state.lang, rerenderThisFeed);
       // Photo tile: first photo (or video) fills the whole card, title sits on top
       // of it, and clicking anywhere on the tile opens the full post.
       var firstMedia = (post.media && post.media.length) ? post.media[0] : null;
