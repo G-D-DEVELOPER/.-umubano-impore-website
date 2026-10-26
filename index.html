@@ -828,7 +828,10 @@
       backBtn:'Back',
       managePagesNav:'Manage pages', managePagesTitle:'Manage pages',
       renamePagesHeading:'Rename & reorder pages — use the arrows to change the order', renamePagesBtn:'Save changes', pageNamesSaved:'Page names and order saved.',
-      managePagesHint:'Add whole new pages to the site, each with its own posts. The built-in pages (Home, Our non-profit organisation, Projects, Join in, Contact, Sponsors) can’t be removed, but any page you add here can be renamed or deleted again.',
+      managePagesHint:'Add whole new pages to the site, each with its own posts. You can delete any page or sub-page, including the built-in ones (only Home and Settings are kept so you never lose the way back into admin).',
+      removeBuiltinHeading:'Delete built-in pages and sub-pages', restoreBtn:'Restore', removedPagesHeading:'Deleted built-in pages (you can bring them back)', noRemovedPages:'Nothing deleted.',
+      deleteBuiltinPageConfirm:'Delete this page from the site? Its posts are kept safe and come back if you restore the page.',
+      deleteBuiltinSectionConfirm:'Delete this sub-page from the site? Its posts are kept safe and come back if you restore it.',
       addPageHeading:'Add a new page', pageNameEn:'Page name (English)', pageNameFr:'Page name (French, optional)', pageNameRw:'Page name (Kinyarwanda, optional)',
       addPageBtn:'Add page', noCustomPages:'No pages added yet.',
       newSectionPlaceholder:'New sub-page name', addSectionBtn:'Add',
@@ -901,7 +904,10 @@
       backBtn:'Retour',
       managePagesNav:'Gérer les pages', managePagesTitle:'Gérer les pages',
       renamePagesHeading:"Renommer et réorganiser les pages — utilisez les flèches pour changer l'ordre", renamePagesBtn:'Enregistrer les modifications', pageNamesSaved:'Noms et ordre des pages enregistrés.',
-      managePagesHint:"Ajoutez de nouvelles pages au site, chacune avec ses propres publications. Les pages intégrées (Accueil, Notre association, Projets, Participer, Contact, Sponsors) ne peuvent pas être supprimées, mais toute page ajoutée ici peut être renommée ou supprimée.",
+      managePagesHint:"Ajoutez de nouvelles pages au site, chacune avec ses propres publications. Vous pouvez supprimer n'importe quelle page ou sous-page, y compris les pages intégrées (seuls Accueil et Paramètres sont conservés afin de ne jamais perdre l'accès à l'administration).",
+      removeBuiltinHeading:'Supprimer des pages et sous-pages intégrées', restoreBtn:'Restaurer', removedPagesHeading:'Pages intégrées supprimées (vous pouvez les rétablir)', noRemovedPages:'Rien de supprimé.',
+      deleteBuiltinPageConfirm:'Supprimer cette page du site ? Ses publications sont conservées et reviennent si vous la restaurez.',
+      deleteBuiltinSectionConfirm:'Supprimer cette sous-page du site ? Ses publications sont conservées et reviennent si vous la restaurez.',
       addPageHeading:'Ajouter une nouvelle page', pageNameEn:'Nom de la page (anglais)', pageNameFr:'Nom de la page (français, facultatif)', pageNameRw:'Nom de la page (kinyarwanda, facultatif)',
       addPageBtn:'Ajouter la page', noCustomPages:'Aucune page ajoutée pour le moment.',
       newSectionPlaceholder:'Nom de la nouvelle sous-page', addSectionBtn:'Ajouter',
@@ -975,7 +981,10 @@
       backBtn:'Subira inyuma',
       managePagesNav:'Gucunga amapaji', managePagesTitle:'Gucunga amapaji',
       renamePagesHeading:"Hindura amazina no gutondeka amapaji — koresha imyambi kugira ngo uhindure uko atondekwa", renamePagesBtn:'Bika impinduka', pageNamesSaved:"Amazina n'uko amapaji atondekwa byabitswe.",
-      managePagesHint:"Ongeraho amapaji mashya ku rubuga, buri imwe ifite amakuru yayo bwite. Amapaji asanzwe (Ahabanza, Umuryango wacu, Imishinga, Twifatanye, Twandikire, Abaterankunga) ntashobora gusibwa, ariko ipaji iyo ari yo yose wongeyeho hano ushobora kuyihindura izina cyangwa kuyisiba.",
+      managePagesHint:"Ongeraho amapaji mashya ku rubuga, buri imwe ifite amakuru yayo bwite. Ushobora gusiba ipaji cyangwa urupapuro urwo ari rwo rwose, harimo n'amapaji asanzwe (Ahabanza n'Igenamiterere ni byo bisigara gusa kugira ngo utazigera ubura inzira yo kwinjira nk'umuyobozi).",
+      removeBuiltinHeading:'Siba amapaji n\'inyandiko zisanzwe', restoreBtn:'Garura', removedPagesHeading:'Amapaji asanzwe yasibwe (ushobora kuyagarura)', noRemovedPages:'Nta kintu cyasibwe.',
+      deleteBuiltinPageConfirm:'Gusiba iyi paji ku rubuga? Amakuru ari kuri yo arabikwa kandi azagaruka nuyigarura.',
+      deleteBuiltinSectionConfirm:'Gusiba uru rupapuro ku rubuga? Amakuru aruriho arabikwa kandi azagaruka nurugarura.',
       addPageHeading:'Ongeraho ipaji nshya', pageNameEn:'Izina ry\'ipaji (Icyongereza)', pageNameFr:'Izina ry\'ipaji (Igifaransa, si ngombwa)', pageNameRw:'Izina ry\'ipaji (Ikinyarwanda, si ngombwa)',
       addPageBtn:'Ongeraho ipaji', noCustomPages:'Nta paji yongewemo kugeza ubu.',
       newSectionPlaceholder:'Izina ry\'urupapuro rushya', addSectionBtn:'Ongeraho',
@@ -1041,7 +1050,20 @@
   // so the site's core structure can never be deleted — only pages admin created
   // can be removed again.
   var customPages = [];
-  function allPages(){ return PAGES.concat(customPages); }
+
+  // Built-in pages/sub-pages the admin has deleted. They're only hidden, never
+  // erased — their posts stay in the database and return if restored. Home and
+  // Settings can't be removed (Settings holds the way back into admin).
+  var removedBuiltins = { pages:[], sections:{} };
+  var PROTECTED_PAGE_IDS = ['home','settings'];
+  function allPages(){
+    var builtins = PAGES.filter(function(p){ return removedBuiltins.pages.indexOf(p.id)===-1 || PROTECTED_PAGE_IDS.indexOf(p.id)!==-1; }).map(function(p){
+      var gone = removedBuiltins.sections[p.id];
+      if(!gone || !gone.length) return p;
+      return Object.assign({}, p, { sections: p.sections.filter(function(s){ return gone.indexOf(s.id)===-1; }) });
+    });
+    return builtins.concat(customPages);
+  }
 
   function findPage(id){ return allPages().find(function(p){return p.id===id;}); }
   function findSection(pageId, secId){
@@ -2637,6 +2659,29 @@
     renderFooter();
   }
 
+  async function loadRemovedBuiltins(){
+    try{
+      var res = await siteStorage.get('removed_pages_v1', true);
+      var parsed = (res && res.value) ? JSON.parse(res.value) : null;
+      removedBuiltins = { pages: (parsed && parsed.pages) || [], sections: (parsed && parsed.sections) || {} };
+    }catch(err){
+      removedBuiltins = { pages:[], sections:{} };
+    }
+    if(state.currentPage!=='home' && !findSection(state.currentPage, state.currentSection)) navigateTo('home','home');
+    renderSidebar();
+    renderFooter();
+  }
+
+  async function saveRemovedBuiltins(onRetry){
+    try{
+      await withRetry(function(){ return siteStorage.set('removed_pages_v1', JSON.stringify(removedBuiltins), true); }, onRetry);
+      return true;
+    }catch(err){
+      lastStorageError = err; console.error('Storage error', err);
+      return false;
+    }
+  }
+
   async function saveCustomPages(onRetry){
     try{
       await withRetry(function(){ return siteStorage.set('custom_pages_v1', JSON.stringify(customPages), true); }, onRetry);
@@ -2658,6 +2703,8 @@
       '<button class="btn-solid" id="mpRenameSaveBtn" style="margin:10px 0 22px;">'+escapeHtml(t('renamePagesBtn'))+'</button>'+
       '<p style="color:var(--muted); font-size:13.5px;">'+escapeHtml(t('managePagesHint'))+'</p>'+
       '<div id="mpList"></div>'+
+      '<h4 style="margin:22px 0 8px;">'+escapeHtml(t('removeBuiltinHeading'))+'</h4>'+
+      '<div id="mpBuiltinList"></div>'+
       '<h4 style="margin:22px 0 8px;">'+escapeHtml(t('addPageHeading'))+'</h4>'+
       '<label class="field-label">'+escapeHtml(t('pageNameEn'))+'</label>'+
       '<input type="text" id="mpNewPageEn" class="composer-title-input">'+
@@ -2816,6 +2863,111 @@
       });
     }
     renderRenameList();
+
+    // Deleting a built-in page or sub-page only hides it (see removedBuiltins),
+    // so this keeps the rename/reorder working copies above in step with what
+    // still exists, without throwing away order changes not saved yet.
+    function syncWorkingCopies(){
+      var live = allPages();
+      pagesById = {}; live.forEach(function(p){ pagesById[p.id] = p; });
+      workingPageOrder = workingPageOrder.filter(function(id){ return pagesById[id]; });
+      live.forEach(function(p){ if(p.id!=='settings' && workingPageOrder.indexOf(p.id)===-1) workingPageOrder.push(p.id); });
+      live.forEach(function(p){
+        var cur = (workingSectionOrder[p.id]||[]).filter(function(sid){ return p.sections.some(function(s){ return s.id===sid; }); });
+        p.sections.forEach(function(s){ if(cur.indexOf(s.id)===-1) cur.push(s.id); });
+        workingSectionOrder[p.id] = cur;
+      });
+      renderSidebar(); renderFooter();
+      renderRenameList(captureInputValues());
+      renderBuiltinList();
+    }
+
+    async function changeRemoved(mutate){
+      var before = JSON.parse(JSON.stringify(removedBuiltins));
+      mutate();
+      var ok = await saveRemovedBuiltins();
+      if(!ok){ removedBuiltins = before; showToast(saveErrorMessage(), true); return false; }
+      return true;
+    }
+
+    function renderBuiltinList(){
+      var el = box.querySelector('#mpBuiltinList');
+      var keptHtml = '', removedHtml = '';
+      PAGES.forEach(function(p){
+        if(PROTECTED_PAGE_IDS.indexOf(p.id)!==-1) return;
+        var pageGone = removedBuiltins.pages.indexOf(p.id)!==-1;
+        var goneSecs = removedBuiltins.sections[p.id] || [];
+        if(pageGone){
+          removedHtml += '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin:6px 0;">'+
+            '<span>'+escapeHtml(p.label.en)+'</span>'+
+            '<button class="btn-ghost" data-restore-page="'+p.id+'">'+escapeHtml(t('restoreBtn'))+'</button></div>';
+          return;
+        }
+        var liveSecs = p.sections.filter(function(s){ return goneSecs.indexOf(s.id)===-1; });
+        var secHtml = liveSecs.map(function(s){
+          return '<li>'+escapeHtml(s.label.en)+
+            (liveSecs.length>1 ? ' <button class="footer-link sub" data-rm-section="'+p.id+'|'+s.id+'" style="color:var(--danger); display:inline; padding:0;">'+escapeHtml(t('deleteBtn'))+'</button>' : '')+
+            '</li>';
+        }).join('');
+        keptHtml += '<div style="border:1px solid var(--green-line); border-radius:10px; padding:10px 14px; margin-bottom:8px;">'+
+          '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">'+
+            '<strong>'+escapeHtml(p.label.en)+'</strong>'+
+            '<button class="del-btn" data-rm-page="'+p.id+'">'+escapeHtml(t('deleteBtn'))+'</button>'+
+          '</div>'+
+          '<ul style="margin:6px 0 0; padding-left:18px;">'+secHtml+'</ul>'+
+        '</div>';
+        goneSecs.forEach(function(sid){
+          var s = p.sections.find(function(x){ return x.id===sid; });
+          if(!s) return;
+          removedHtml += '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin:6px 0;">'+
+            '<span>'+escapeHtml(p.label.en+' › '+s.label.en)+'</span>'+
+            '<button class="btn-ghost" data-restore-section="'+p.id+'|'+s.id+'">'+escapeHtml(t('restoreBtn'))+'</button></div>';
+        });
+      });
+      el.innerHTML = keptHtml +
+        '<h4 style="margin:16px 0 6px;">'+escapeHtml(t('removedPagesHeading'))+'</h4>' +
+        (removedHtml || '<p style="color:var(--muted);">'+escapeHtml(t('noRemovedPages'))+'</p>');
+
+      el.querySelectorAll('[data-rm-page]').forEach(function(btn){
+        btn.addEventListener('click', async function(){
+          if(!(await showConfirmDialog(t('deleteBuiltinPageConfirm')))) return;
+          var id = btn.getAttribute('data-rm-page');
+          if(!(await changeRemoved(function(){ removedBuiltins.pages.push(id); }))) return;
+          if(state.currentPage===id) navigateTo('home','home');
+          syncWorkingCopies();
+        });
+      });
+      el.querySelectorAll('[data-rm-section]').forEach(function(btn){
+        btn.addEventListener('click', async function(){
+          if(!(await showConfirmDialog(t('deleteBuiltinSectionConfirm')))) return;
+          var parts = btn.getAttribute('data-rm-section').split('|');
+          if(!(await changeRemoved(function(){
+            if(!removedBuiltins.sections[parts[0]]) removedBuiltins.sections[parts[0]] = [];
+            removedBuiltins.sections[parts[0]].push(parts[1]);
+          }))) return;
+          if(state.currentPage===parts[0] && state.currentSection===parts[1]){
+            var rest = findPage(parts[0]);
+            navigateTo(parts[0], rest && rest.sections.length ? rest.sections[0].id : 'home');
+          }
+          syncWorkingCopies();
+        });
+      });
+      el.querySelectorAll('[data-restore-page]').forEach(function(btn){
+        btn.addEventListener('click', async function(){
+          var id = btn.getAttribute('data-restore-page');
+          if(await changeRemoved(function(){ removedBuiltins.pages = removedBuiltins.pages.filter(function(x){ return x!==id; }); })) syncWorkingCopies();
+        });
+      });
+      el.querySelectorAll('[data-restore-section]').forEach(function(btn){
+        btn.addEventListener('click', async function(){
+          var parts = btn.getAttribute('data-restore-section').split('|');
+          if(await changeRemoved(function(){
+            removedBuiltins.sections[parts[0]] = (removedBuiltins.sections[parts[0]]||[]).filter(function(x){ return x!==parts[1]; });
+          })) syncWorkingCopies();
+        });
+      });
+    }
+    renderBuiltinList();
 
     box.querySelector('#mpRenameSaveBtn').addEventListener('click', async function(){
       var saveBtn = box.querySelector('#mpRenameSaveBtn');
@@ -4469,6 +4621,7 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
   loadSiteTheme();
   loadFooterInfo();
   loadCustomPages();
+  loadRemovedBuiltins();
   loadPageLabelOverrides();
   loadNavOrder();
 
