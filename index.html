@@ -1653,19 +1653,48 @@
   }
 
   // ---------------- image handling ----------------
-  function resizeImage(file, cb){
+  // Photos are saved inside the database as text, so some shrinking is needed to keep
+  // pages loading quickly — but it used to cut every photo to 900px wide at 70% JPEG
+  // quality, which looks soft on any modern screen. Now: the longest side is capped
+  // at maxDim (1800px by default, 2600px for the full-width banner/hero photos),
+  // smaller photos are never enlarged, quality starts high (88%) and only steps down
+  // if the result is too big to store, and PNGs (diagrams, logos, screenshots) stay
+  // PNG so text in them doesn't get JPEG smudging.
+  var FULL_WIDTH_PHOTO = { maxDim:2600, budget:3000000 };
+  function resizeImage(file, cb, opts){
+    opts = opts || {};
+    var maxDim = opts.maxDim || 1800;
+    var budget = opts.budget || 1700000; // characters of the saved data URL (~1.3MB)
     var reader = new FileReader();
     reader.onload = function(e){
       var img = new Image();
       img.onload = function(){
-        var maxW = 900;
-        var scale = Math.min(1, maxW/img.width);
+        var scale = Math.min(1, maxDim/Math.max(img.width, img.height));
         var canvas = document.createElement('canvas');
-        canvas.width = img.width*scale;
-        canvas.height = img.height*scale;
         var ctx = canvas.getContext('2d');
-        ctx.drawImage(img,0,0,canvas.width,canvas.height);
-        cb(canvas.toDataURL('image/jpeg', 0.7));
+
+        function draw(s){
+          canvas.width = Math.max(1, Math.round(img.width*s));
+          canvas.height = Math.max(1, Math.round(img.height*s));
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.fillStyle = '#fff'; // transparent areas would turn black as JPEG
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        }
+
+        draw(scale);
+        if(file.type === 'image/png'){
+          var png = canvas.toDataURL('image/png');
+          if(png.length <= budget){ cb(png); return; }
+        }
+        var quality = 0.88, out = canvas.toDataURL('image/jpeg', quality);
+        while(out.length > budget){
+          if(quality > 0.72){ quality -= 0.06; }
+          else { scale *= 0.85; draw(scale); }
+          out = canvas.toDataURL('image/jpeg', quality);
+        }
+        cb(out);
       };
       img.src = e.target.result;
     };
@@ -3600,7 +3629,7 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
       resizeImage(file, function(dataUrl){
         storyHeroImage = dataUrl;
         renderSinglePreview('heroPhotoPreview', storyHeroImage);
-      });
+      }, FULL_WIDTH_PHOTO);
     });
     document.getElementById('founderImgInput').addEventListener('change', function(e){
       var file = e.target.files[0];
@@ -4019,7 +4048,7 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
           } else {
             showToast(saveErrorMessage(), true);
           }
-        });
+        }, FULL_WIDTH_PHOTO);
       });
       var removeBtn = document.getElementById('pageHeaderRemoveBtn');
       if(removeBtn){
