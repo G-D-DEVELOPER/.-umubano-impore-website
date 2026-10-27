@@ -144,6 +144,9 @@
     background:var(--green-deep);
   }
   .hero-photo img{width:100%; display:block; aspect-ratio:16/9; object-fit:cover;}
+  /* Shown while the saved hero photo is still downloading: a plain green block the
+     same shape as the photo, so no wrong picture ever flashes up first. */
+  .hero-photo.hero-loading{aspect-ratio:16/9;}
   /* The photo is left bright and even across its whole width; the title stays
      readable through a text shadow rather than by darkening the picture. */
   .hero-overlay{
@@ -3359,11 +3362,25 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
   }
 
   async function loadHomeStory(){
-    try{
-      var res = await siteStorage.get('home_story_v2', true);
-      state.homeStory = (res && res.value) ? JSON.parse(res.value) : freshHomeStory();
-    }catch(err){
+    // The saved story is large (it carries the hero photo), so a slow or dropped
+    // connection is the likeliest thing to go wrong — try a few times before giving up.
+    var loaded = false;
+    for(var attempt=0; attempt<3 && !loaded; attempt++){
+      try{
+        var res = await siteStorage.get('home_story_v2', true);
+        state.homeStory = (res && res.value) ? JSON.parse(res.value) : freshHomeStory();
+        loaded = true;
+      }catch(err){
+        console.error('Could not load the home story (try '+(attempt+1)+')', err);
+        if(attempt<2) await sleep(1500*(attempt+1));
+      }
+    }
+    state.homeStoryLoadFailed = !loaded;
+    if(!loaded){
+      // Show plain text defaults, but never the built-in hero photo, and never let
+      // these placeholder values be saved over the real story (see saveHomeStory).
       state.homeStory = freshHomeStory();
+      state.homeStory.heroImage = '';
     }
     var seedCopy = freshHomeStory();
     Object.keys(seedCopy).forEach(function(key){
@@ -3383,6 +3400,7 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
   }
 
   async function saveHomeStory(story, onRetry){
+    if(state.homeStoryLoadFailed) return false; // the real story never loaded — don't overwrite it with placeholders
     try{
       await withRetry(function(){ return siteStorage.set('home_story_v2', JSON.stringify(story), true); }, onRetry);
       return true;
@@ -3404,13 +3422,17 @@ var MARRAINE_PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAg
 
   async function renderHome(){
     var heroContainer = document.getElementById('homeHero');
-    if(!state.homeStory){
-      heroContainer.innerHTML = '<div class="hero-photo"><img src="'+HERO_PHOTO+'"><div class="hero-overlay"></div>'+heroBannerHTML()+'</div>';
+    if(!state.homeStory || state.homeStoryLoadFailed){
+      // No photo at all until the saved one arrives — the built-in default photo
+      // must never be shown in its place, even briefly.
+      heroContainer.innerHTML = '<div class="hero-photo hero-loading"><div class="hero-overlay"></div>'+heroBannerHTML()+'</div>';
       pageWrap.innerHTML = '';
       await loadHomeStory();
     }
-    var heroImg = state.homeStory.heroImage || HERO_PHOTO;
-    heroContainer.innerHTML = '<div class="hero-photo"><img src="'+heroImg+'"><div class="hero-overlay"></div>'+heroBannerHTML()+'</div>';
+    // The built-in default only applies when nothing was ever saved — not when the
+    // saved version simply failed to download.
+    var heroImg = state.homeStory.heroImage || (state.homeStoryLoadFailed ? '' : HERO_PHOTO);
+    heroContainer.innerHTML = '<div class="hero-photo'+(heroImg ? '' : ' hero-loading')+'">'+(heroImg ? '<img src="'+heroImg+'">' : '')+'<div class="hero-overlay"></div>'+heroBannerHTML()+'</div>';
     var heroCtaBtn = document.getElementById('heroCtaBtn');
     if(heroCtaBtn) heroCtaBtn.addEventListener('click', function(){
       var feedEl = document.getElementById('feed');
